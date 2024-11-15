@@ -35,6 +35,11 @@ requires-python = ">=3.12"
 dependencies = []
 license = { file = "LICENSE" }
 
+[project.optional-dependencies]
+click = ["click"]
+typer = ["typer"]
+all = ["click", "typer"]
+
 [tool.uv]
 default-groups = ["dev", "lint", "docs"]
 
