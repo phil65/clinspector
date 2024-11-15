@@ -39,9 +39,9 @@ def _parse_command(command: Command) -> commandinfo.CommandInfo:
     ]
 
     return commandinfo.CommandInfo(
-        name=command.name,
+        name=command.name or "",
         description=command.description,
-        usage=command._synopsis,
+        # usage=command._synopsis,
         params=params,
         hidden=command.hidden,
     )
@@ -62,8 +62,8 @@ def parse(app: Application) -> commandinfo.CommandInfo:
 
     return commandinfo.CommandInfo(
         name=app.name or "",
-        description=app.definition or "",
-        usage=app.definition,  # TODO
+        description=app.long_version or "",
+        # usage=app.definition,  # TODO
         subcommands=subcommands,
         params=_parse_command(default_cmd).params,
     )

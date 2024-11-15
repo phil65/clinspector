@@ -27,7 +27,7 @@ def _get_param_from_arg(name: str, arg: cappa.Arg[Any]) -> param.Param:
         name=name,
         help=arg.help,
         default=arg.default,
-        required=arg.required,
+        required=arg.required or False,
         opts=opts,
         # multiple=arg.multiple,
         # is_flag=isinstance(arg.type, bool),
