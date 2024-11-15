@@ -31,6 +31,13 @@ def get_cmd_info(instance: Any) -> commandinfo.CommandInfo | None:
         if isinstance(instance, click.Group):
             return click_info(instance)
 
+    if importlib.util.find_spec("cleo"):
+        from clinspector.introspect.introspect_cleo import get_info as cleo_info
+        from cleo.application import Application
+
+        if isinstance(instance, Application):
+            return cleo_info(instance)
+
     if importlib.util.find_spec("cappa"):
         from clinspector.introspect.introspect_cappa import get_info as cappa_info
 

@@ -32,14 +32,23 @@ classifiers = [
 ]
 keywords = []
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    # copier comment
+    "pyparsing",
+]
 license = { file = "LICENSE" }
 
 [project.optional-dependencies]
 click = ["click"]
 typer = ["typer"]
 cappa = ["cappa"]
-all = ["click", "typer", "cappa"]
+cleo = ["cleo"]
+all = ["click", "typer", "cappa", "cleo"]
+
+[project.scripts]
+clinspector_argparse = "clinspector.clis.argparse_cli:main"
+clinspector_click = "clinspector.clis.click_cli:main"
+clinspector_typer = "clinspector.clis.typer_cli:main"
 
 [tool.uv]
 default-groups = ["dev", "lint", "docs"]
