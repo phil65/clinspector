@@ -38,7 +38,8 @@ license = { file = "LICENSE" }
 [project.optional-dependencies]
 click = ["click"]
 typer = ["typer"]
-all = ["click", "typer"]
+cappa = ["cappa"]
+all = ["click", "typer", "cappa"]
 
 [tool.uv]
 default-groups = ["dev", "lint", "docs"]

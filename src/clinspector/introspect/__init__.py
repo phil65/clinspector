@@ -31,6 +31,12 @@ def get_cmd_info(instance: Any) -> commandinfo.CommandInfo | None:
         if isinstance(instance, click.Group):
             return click_info(instance)
 
+    if importlib.util.find_spec("cappa"):
+        from clinspector.introspect.introspect_cappa import get_info as cappa_info
+
+        if hasattr(instance, "__cappa__"):
+            return cappa_info(instance)
+
     if isinstance(instance, argparse.ArgumentParser):
         from clinspector.introspect.introspect_argparse import get_info as argparse_info
 
