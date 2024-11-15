@@ -30,3 +30,92 @@
 
 [Read the documentation!](https://phil65.github.io/clinspector/)
 
+# CLInspector Documentation
+
+CLInspector is a library to introspect Python CLI applications and extract their command structure and parameters programmatically.
+
+## Usage
+
+The main entry point is the `get_cmd_info()` function which analyzes a CLI application instance and returns a structured `CommandInfo` object:
+
+```python
+from clinspector import get_cmd_info
+
+command_info = get_cmd_info(cli_instance)
+```
+
+The function accepts CLI application instances from the following frameworks:
+
+- [Typer](https://typer.tiangolo.com/) - `typer.Typer` instances
+- [Click](https://click.palletsprojects.com/) - `click.Group` instances
+- [Cleo](https://cleo.readthedocs.io/) - `cleo.Application` instances
+- [Cappa](https://github.com/DynamicArray/Cappa) - Classes decorated with `@cappa.command`
+- [argparse](https://docs.python.org/3/library/argparse.html) - `ArgumentParser` instances
+
+The extracted information is returned as a `CommandInfo` object containing:
+
+### CommandInfo Fields
+
+- `name: str` - Name of the command
+- `description: str` - Description/help text
+- `usage: str` - Formatted usage string
+- `subcommands: dict[str, CommandInfo]` - Nested subcommands
+- `deprecated: bool` - Whether command is marked as deprecated
+- `epilog: str | None` - Optional epilog text
+- `hidden: bool` - Whether command is hidden
+- `params: list[Param]` - List of command parameters
+
+### Param Fields
+
+- `name: str` - Parameter name
+- `help: str | None` - Help text
+- `default: Any` - Default value
+- `opts: list[str]` - Parameter options (e.g. `["-f", "--flag"]`)
+- `required: bool` - Whether parameter is required
+- `is_flag: bool` - Whether parameter is a flag
+- `multiple: bool` - Whether parameter accepts multiple values
+- `nargs: int | str | None` - Number of arguments accepted
+- `envvar: str | None` - Environment variable name
+- `hidden: bool` - Whether parameter is hidden
+- `param_type_name: Literal["option", "parameter", "argument"]` - Parameter type
+- `type: dict[str, str] | None` - Parameter type information
+- `metavar: str | None` - Display name in help text
+
+You can access subcommands using dictionary syntax:
+
+```python
+# Get info for "build" subcommand
+build_info = command_info["build"]
+
+# Access nested subcommand
+nested_info = command_info["group"]["subcommand"]
+```
+```
+
+The extracted information allows you to:
+
+- Generate documentation automatically
+- Build command completion
+- Create wrappers and adapters
+- Perform static analysis of CLI interfaces
+- And more!
+
+Example output for a click command:
+
+```python
+CommandInfo(
+    name="cli",
+    description="Example CLI tool",
+    usage="cli [OPTIONS] COMMAND [ARGS]...",
+    params=[
+        Param(name="verbose", help="Enable verbose output", opts=["-v", "--verbose"])
+    ],
+    subcommands={
+        "build": CommandInfo(
+            name="build",
+            description="Build the project",
+            params=[...]
+        )
+    }
+)
+```
