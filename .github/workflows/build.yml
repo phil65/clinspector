@@ -13,12 +13,13 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-      
+
       - name: Set up Python ${{ matrix.python_version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python_version }}
           allow-prereleases: true
+
       - name: Install uv
         uses: astral-sh/setup-uv@v3
         with:
@@ -27,7 +28,7 @@ jobs:
           cache-suffix: py${{ matrix.python_version }}
 
       - name: Install dependencies (uv sync)
-        run: uv sync --all-extras
+        run: uv sync --all-extras --no-group docs
 
       - name: Check for code issues (ruff check)
         uses: astral-sh/ruff-action@v1
@@ -38,15 +39,14 @@ jobs:
           args: "format --check"
 
       - name: Static type checking (MyPy)
-        run: uv run mypy src/clinspector/
+        run: uv run --no-group docs mypy src/clinspector/
 
       - name: Run tests
-        run: uv run pytest --cov-report=xml --cov=src/clinspector/ --cov-report=term-missing
+        run: uv run --no-group docs pytest --cov-report=xml --cov=src/clinspector/ --cov-report=term-missing
 
       - name: Upload test results to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
           verbose: true
 
@@ -77,8 +77,8 @@ jobs:
       - name: Build package
         run: uv build
 
-      - name: Release package on PyPI
-        run: uv publish
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
 
       - name: Release package on GitHub
         uses: ncipollo/release-action@v1
