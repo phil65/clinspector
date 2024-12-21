@@ -1,11 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable  # noqa: TC003
 import dataclasses
-from typing import TYPE_CHECKING, Any, Literal
-
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
+from typing import Any, Literal
 
 
 @dataclasses.dataclass(frozen=True)
@@ -50,6 +47,8 @@ class Param:
     """Whether the param is eager."""
     metavar: str | None = None
     """How value is represented in the help page."""
+    choices: list[str] | None = None
+    """List of valid choices for this parameter."""
 
     @property
     def opt_str(self) -> str:
