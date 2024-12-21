@@ -1,0 +1,10 @@
+Usage: python cli.py <command> [<args>]
+
+Available commands:
+  cli.py run          Run the application
+  cli.py test         Run tests
+  cli.py config       Configure settings
+  cli.py --help       Show help message
+
+For detailed information on a specific command, run:
+  cli.py <command> --help
