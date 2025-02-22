@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from clinspector.models.param import Param
 
 
-def _add_param(parser: argparse.ArgumentParser, param: Param) -> None:
+def _add_param(parser: argparse.ArgumentParser, param: Param):
     """Add a parameter to an ArgumentParser instance.
 
     Args:

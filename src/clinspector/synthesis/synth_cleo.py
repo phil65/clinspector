@@ -112,7 +112,7 @@ def create_app(cmd_info: CommandInfo) -> Application:
         app.add(_create_command_class(cmd_info)())
 
     # Add all subcommands recursively
-    def add_commands(commands: dict[str, CommandInfo]) -> None:
+    def add_commands(commands: dict[str, CommandInfo]):
         for subcmd in commands.values():
             cmd_class = _create_command_class(subcmd)
             app.add(cmd_class())
