@@ -62,7 +62,7 @@ def _create_callback(
             }
             if param.multiple:
                 param_type = list[str]  # type: ignore
-            default_or_param = typer.Argument(param.default, **arg_kwargs)
+            default_or_param = typer.Argument(param.default, **arg_kwargs)  # type: ignore
 
         import inspect
 
