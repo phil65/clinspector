@@ -44,7 +44,7 @@ def _create_param_field(
                 short = opt.lstrip("-")
         arg_kwargs.update({"short": short, "long": long})
 
-    arg = cappa.Arg(**arg_kwargs)
+    arg = cappa.Arg[Any](**arg_kwargs)
 
     # Create the field with proper metadata typing
     default_value: Any | _MISSING_TYPE = (
