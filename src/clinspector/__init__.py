@@ -1,4 +1,4 @@
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 from clinspector.introspect import get_cmd_info
 from clinspector.models.commandinfo import CommandInfo
