@@ -44,6 +44,7 @@ def _parse_command(command: Command) -> commandinfo.CommandInfo:
         # usage=command._synopsis,
         params=params,
         hidden=command.hidden,
+        callback=command.handle,
     )
 
 

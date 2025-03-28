@@ -41,6 +41,7 @@ def parse(
         deprecated=dct["deprecated"],
         epilog=dct["epilog"],
         hidden=dct["hidden"],
+        callback=command.callback,
     )
 
 
