@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from clinspector.models import commandinfo
 
 
-def get_cmd_info(
+def get_cmd_info(  # noqa: PLR0911
     instance: Any, command: str | None = None
 ) -> commandinfo.CommandInfo | None:
     """Return a `CommmandInfo` object for command of given instance.
@@ -51,6 +51,18 @@ def get_cmd_info(
 
         if hasattr(instance, "__cappa__"):
             return cappa_info(instance)  # TODO
+
+    if importlib.util.find_spec("cyclopts"):
+        from clinspector.introspect.introspect_cyclopts import get_info as cyclopts_info
+
+        # Check if it's a cyclopts App by looking for distinctive attributes
+        if (
+            hasattr(instance, "_commands")
+            and hasattr(instance, "default_command")
+            and hasattr(instance, "name")
+            and hasattr(instance, "help_flags")
+        ):
+            return cyclopts_info(instance, command=command)
 
     if isinstance(instance, argparse.ArgumentParser):
         from clinspector.introspect.introspect_argparse import get_info as argparse_info

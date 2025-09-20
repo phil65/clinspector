@@ -42,6 +42,7 @@ click = ["click"]
 typer = ["typer"]
 cappa = ["cappa"]
 cleo = ["cleo"]
+cyclopts = ["cyclopts"]
 tldr = ["tldr"]
 man-pages = ["hishel>=0.1.1", "httpx"]
 all = ["click", "typer", "cappa", "cleo"]
@@ -56,6 +57,7 @@ dev = [
     "pyreadline3",
     "devtools",
     # Only add below (Copier)
+    "cyclopts>=3.24.0",
 ]
 benchmark = ["pyinstrument"]
 lint = [
