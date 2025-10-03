@@ -11,13 +11,14 @@ from typing import TYPE_CHECKING
 
 import hishel
 import httpx
-from upath import UPath
 
-from clinspector.help_providers.base import CommandHelp, Example, HelpProvider
+from clinspector.help_providers.base import CommandHelp, HelpProvider
 
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+
+    from clinspector.help_providers.base import Example
 
 
 @dataclass
@@ -33,7 +34,7 @@ class ManSection:
 @contextlib.asynccontextmanager
 async def get_client() -> AsyncIterator[httpx.AsyncClient]:
     """Get a configured httpx client with caching."""
-    cache_dir = UPath("~/.cache/clinspector/man_pages").expanduser()
+    cache_dir = Path("~/.cache/clinspector/man_pages").expanduser()
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     storage = hishel.AsyncFileStorage(

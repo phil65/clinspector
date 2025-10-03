@@ -10,6 +10,8 @@ import cappa
 
 
 if TYPE_CHECKING:
+    from dataclasses import _MISSING_TYPE
+
     from clinspector.models.commandinfo import CommandInfo
     from clinspector.models.param import Param
 
@@ -18,8 +20,6 @@ def _create_param_field(
     param: Param,
 ) -> tuple[str, type[str | list[str] | bool], dataclasses.Field[Any]]:
     """Create a dataclass field for a parameter."""
-    from dataclasses import _MISSING_TYPE  # type: ignore
-
     type_hint: type[str | list[str] | bool] = str  # Default type
     if param.multiple:
         type_hint = list[str]

@@ -2,8 +2,6 @@
 
 [![PyPI License](https://img.shields.io/pypi/l/clinspector.svg)](https://pypi.org/project/clinspector/)
 [![Package status](https://img.shields.io/pypi/status/clinspector.svg)](https://pypi.org/project/clinspector/)
-[![Daily downloads](https://img.shields.io/pypi/dd/clinspector.svg)](https://pypi.org/project/clinspector/)
-[![Weekly downloads](https://img.shields.io/pypi/dw/clinspector.svg)](https://pypi.org/project/clinspector/)
 [![Monthly downloads](https://img.shields.io/pypi/dm/clinspector.svg)](https://pypi.org/project/clinspector/)
 [![Distribution format](https://img.shields.io/pypi/format/clinspector.svg)](https://pypi.org/project/clinspector/)
 [![Wheel availability](https://img.shields.io/pypi/wheel/clinspector.svg)](https://pypi.org/project/clinspector/)
@@ -21,11 +19,8 @@
 [![Github last commit](https://img.shields.io/github/last-commit/phil65/clinspector)](https://github.com/phil65/clinspector/commits)
 [![Github release date](https://img.shields.io/github/release-date/phil65/clinspector)](https://github.com/phil65/clinspector/releases)
 [![Github language count](https://img.shields.io/github/languages/count/phil65/clinspector)](https://github.com/phil65/clinspector)
-[![Github commits this week](https://img.shields.io/github/commit-activity/w/phil65/clinspector)](https://github.com/phil65/clinspector)
 [![Github commits this month](https://img.shields.io/github/commit-activity/m/phil65/clinspector)](https://github.com/phil65/clinspector)
-[![Github commits this year](https://img.shields.io/github/commit-activity/y/phil65/clinspector)](https://github.com/phil65/clinspector)
 [![Package status](https://codecov.io/gh/phil65/clinspector/branch/main/graph/badge.svg)](https://codecov.io/gh/phil65/clinspector/)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![PyUp](https://pyup.io/repos/github/phil65/clinspector/shield.svg)](https://pyup.io/repos/github/phil65/clinspector/)
 
 [Read the documentation!](https://phil65.github.io/clinspector/)
