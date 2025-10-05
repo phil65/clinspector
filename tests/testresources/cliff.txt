@@ -1,0 +1,21 @@
+usage: cliff-app [--version] [-v | -q] [--log-file LOG_FILE] [-h] [--debug]
+
+OpenStack Command Line Interface
+
+optional arguments:
+  --version            show program's version number and exit
+  -v, --verbose       Increase verbosity of output. Can be repeated.
+  -q, --quiet         Suppress output except warnings and errors
+  --log-file LOG_FILE Log output to a file
+  -h, --help         Show help message and exit
+  --debug            Show tracebacks on errors
+
+Commands:
+  complete       print bash completion command
+  help          print detailed help for another command
+  list          List resources
+  show          Show resource details
+  create        Create a resource
+  delete        Delete a resource
+
+See "cliff-app help COMMAND" for help on a specific command.

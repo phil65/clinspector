@@ -1,0 +1,16 @@
+Usage: cli.py [OPTIONS] COMMAND [ARGS]...
+
+  A sample CLI built with Click.
+
+Options:
+  --version  Show the version and exit.
+  --debug    Enable debug mode.
+  --help     Show this message and exit.
+
+Commands:
+  config   Configure application settings.
+  init     Initialize a new project.
+  run      Run the application.
+  update   Update existing configuration.
+
+Run 'cli.py COMMAND --help' for more information on a command.

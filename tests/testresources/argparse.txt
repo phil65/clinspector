@@ -1,0 +1,22 @@
+usage: program.py [-h] [--version] [-v] [-q] [--log FILE]
+                 {run,test,deploy} ...
+
+Program description
+
+positional arguments:
+  {run,test,deploy}    commands
+    run               Run the application
+    test              Run tests
+    deploy           Deploy the application
+
+optional arguments:
+  -h, --help          show this help message and exit
+  --version           show program's version number and exit
+  -v, --verbose       increase output verbosity
+  -q, --quiet         decrease output verbosity
+  --log FILE         specify output log file
+
+Examples:
+  program.py run --port 8080
+  program.py test --all
+  program.py deploy --env production

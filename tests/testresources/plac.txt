@@ -1,0 +1,19 @@
+usage: plac_example.py [-h] [-n NUMBER] {add,subtract,multiply} ...
+
+Calculator CLI
+
+positional arguments:
+  {add,subtract,multiply}
+    add                 Add two numbers
+    subtract            Subtract two numbers
+    multiply            Multiply two numbers
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -n NUMBER, --number NUMBER
+                        Base number to operate on
+
+For detailed help on commands:
+  plac_example.py add --help
+  plac_example.py subtract --help
+  plac_example.py multiply --help

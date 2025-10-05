@@ -1,0 +1,22 @@
+MyApp version 1.0
+
+Usage: myapp [OPTIONS] COMMAND [ARGS]...
+
+  My Application does amazing things!
+
+Commands:
+  command1            Command1 does something
+  command2            Command2 does something else
+  command3            Command3 does even more things
+
+Optional Arguments:
+  -h, --help         show this help message and exit
+  --debug            toggle debug output
+  --quiet            suppress all output
+  -v, --version      show program's version number and exit
+  --config FILE      configuration file path
+
+Example Usage:
+  myapp command1 --foo=bar
+  myapp command2 arg1 arg2
+  myapp command3 --option value

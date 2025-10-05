@@ -1,0 +1,26 @@
+Usage: rich-app [OPTIONS] COMMAND [ARGS]...
+
+  A beautiful CLI application using rich-click
+
+Options:
+  --install-completion [bash|zsh|fish|powershell|pwsh]
+                                  Install completion for the specified shell.
+  --show-completion [bash|zsh|fish|powershell|pwsh]
+                                  Show completion for the specified shell.
+  --help                          Show this message and exit.
+
+Commands:
+  config    📝 Configure application settings
+  init      🚀 Initialize a new project
+  run       ▶️  Run the application
+  status    ℹ️  Check application status
+  version   Show version information
+
+Style Options:
+  --style [default|dark|light]    Choose display style theme
+  --no-color                      Disable colored output
+
+Examples:
+  rich-app init --name myproject
+  rich-app run --port 8080
+  rich-app status --verbose
