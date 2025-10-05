@@ -3,7 +3,7 @@ from enum import Enum
 import re
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ArgumentType(str, Enum):
@@ -31,49 +31,77 @@ class ArgumentStyle(str, Enum):
 class CLIOption(BaseModel):
     """Represents a CLI option/flag."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     name: str
-    short_flag: str | None = Field(None, description="Short form flag (e.g., -h)")
-    long_flag: str | None = Field(None, description="Long form flag (e.g., --help)")
-    description: str = Field("", description="Description of the option")
-    required: bool = Field(False, description="Whether the option is required")
-    arg_type: ArgumentType = Field(
-        ArgumentType.STRING, description="Type of the argument"
-    )
-    default_value: Any | None = Field(None, description="Default value if any")
-    choices: list[str] | None = Field(None, description="Possible values for choice type")
-    multiple: bool = Field(False, description="Whether multiple values are allowed")
+    short_flag: str | None = None
+    """Short form flag (e.g., -h)"""
+    long_flag: str | None = None
+    """Long form flag (e.g., --help)"""
+    description: str = ""
+    """Description of the option"""
+    required: bool = False
+    """Whether the option is required"""
+    arg_type: ArgumentType = ArgumentType.STRING
+    """Type of the argument"""
+    default_value: Any | None = None
+    """Default value if any"""
+    choices: list[str] | None = None
+    """Possible values for choice type"""
+    multiple: bool = False
+    """Whether multiple values are allowed"""
 
 
 class CLIPositionalArg(BaseModel):
     """Represents a positional argument."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     name: str
     description: str = ""
+    """Description of the positional argument"""
     required: bool = True
+    """Whether the positional argument is required"""
     arg_type: ArgumentType = ArgumentType.STRING
+    """Type of the argument"""
     default_value: Any | None = None
+    """Default value if any"""
     choices: list[str] | None = None
+    """Possible values for choice type"""
 
 
 class CLISubcommand(BaseModel):
     """Represents a subcommand in the CLI."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     name: str
     description: str = ""
+    """Description of the subcommand"""
     options: list[CLIOption] = Field(default_factory=list)
+    """List of options for this subcommand"""
     positional_args: list[CLIPositionalArg] = Field(default_factory=list)
+    """List of positional arguments for this subcommand"""
     subcommands: dict[str, "CLISubcommand"] = Field(default_factory=dict)
+    """Nested subcommands"""
 
 
 class CLIInterface(BaseModel):
     """Root model representing the entire CLI interface."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     program_name: str
     description: str = ""
+    """Description of the program"""
     version: str | None = None
+    """Version information if available"""
     options: list[CLIOption] = Field(default_factory=list)
+    """Global options for the program"""
     positional_args: list[CLIPositionalArg] = Field(default_factory=list)
+    """Global positional arguments"""
     subcommands: dict[str, CLISubcommand] = Field(default_factory=dict)
+    """Available subcommands"""
 
 
 @dataclass

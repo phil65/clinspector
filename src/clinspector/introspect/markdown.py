@@ -4,6 +4,8 @@ from __future__ import annotations
 import importlib.util
 from typing import Any
 
+from clinspector import get_cmd_info
+
 
 def _get_jinja_env():
     """Get a configured Jinja2 environment."""
