@@ -118,14 +118,12 @@ def create_class(cmd_info: CommandInfo) -> type[Any]:
             else:  # It's a positional argument
                 arg_type: type[str | list[str]]
                 arg_type = list[str] if param.multiple else str  # type: ignore
-                locals()[param.name] = typing.Annotated[
-                    arg_type,
-                    cappa.Arg(
-                        help=param.help,
-                        required=param.required,
-                        default=param.default,
-                    ),
-                ]
+                arg = cappa.Arg(
+                    help=param.help,
+                    required=param.required,
+                    default=param.default,
+                )
+                locals()[param.name] = typing.Annotated[arg_type, arg]
 
     return DynamicCommand  # type: ignore
 

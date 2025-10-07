@@ -24,6 +24,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
+  "anyenv[httpx]>=0.5.0",
   # Only add below (Copier)
   "schemez>=0.3.0",
 ]

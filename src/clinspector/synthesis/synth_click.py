@@ -95,11 +95,8 @@ def create_group(
 
     # Add all subcommands recursively
     for subcmd in cmd_info.subcommands.values():
-        if subcmd.subcommands:  # It's a group
-            group.add_command(create_group(subcmd))
-        else:  # It's a command
-            group.add_command(_create_command(subcmd))
-
+        cmd = create_group(subcmd) if subcmd.subcommands else _create_command(subcmd)
+        group.add_command(cmd)
     return group
 
 
