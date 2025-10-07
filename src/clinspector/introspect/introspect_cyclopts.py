@@ -5,6 +5,8 @@ from __future__ import annotations
 import inspect
 from typing import Any, Literal
 
+from cyclopts import App
+
 from clinspector.models import commandinfo, param
 
 
@@ -100,7 +102,7 @@ def _extract_params_from_app(app: Any) -> list[param.Param]:
     return params
 
 
-def _parse_app(app: Any, parent_name: str = "") -> commandinfo.CommandInfo:
+def _parse_app(app: App, parent_name: str = "") -> commandinfo.CommandInfo:
     """Parse a cyclopts App into a CommandInfo object.
 
     Args:
@@ -111,63 +113,36 @@ def _parse_app(app: Any, parent_name: str = "") -> commandinfo.CommandInfo:
         CommandInfo object
     """
     # Get app name - cyclopts apps can have multiple names via tuples
-    app_names = app.name if hasattr(app, "name") else ()
-    if not app_names:
-        name = ""
-    elif isinstance(app_names, (list, tuple)):
-        name = app_names[0] if app_names else ""
-    else:
-        name = str(app_names)
-
+    name = "" if not app.name else app.name[0] if app.name else ""
     # Build full name including parent
     full_name = f"{parent_name} {name}".strip() if parent_name else name
-
-    # Get description from help property
-    description = ""
-    if hasattr(app, "help") and app.help:
-        description = app.help
-
-    # Get usage string
-    usage = app.usage if hasattr(app, "usage") and app.usage else full_name
+    usage = app.usage if app.usage else full_name  # Get usage string
 
     # Extract parameters from default command
     params = _extract_params_from_app(app)
 
     # Parse subcommands
     subcommands = {}
-    if hasattr(app, "_commands"):
-        for cmd_name, sub_app in app._commands.items():
-            # Skip help and version commands
-            if (hasattr(app, "help_flags") and cmd_name in app.help_flags) or (
-                hasattr(app, "version_flags") and cmd_name in app.version_flags
-            ):
-                continue
-
-            try:
-                sub_info = _parse_app(sub_app, full_name)
-                subcommands[cmd_name] = sub_info
-            except (AttributeError, TypeError, ValueError):
-                # Create minimal command info for problematic subcommands
-                subcommands[cmd_name] = commandinfo.CommandInfo(name=cmd_name)
-
-    # Check if hidden
-    hidden = not getattr(app, "show", True)
-
-    # Get epilog
-    epilog = getattr(app, "epilog", None)
-
-    # Get callback
-    callback = getattr(app, "default_command", None)
+    for cmd_name, sub_app in app._commands.items():
+        # Skip help and version commands
+        if (cmd_name in app.help_flags) or (cmd_name in app.version_flags):
+            continue
+        try:
+            sub_info = _parse_app(sub_app, full_name)
+            subcommands[cmd_name] = sub_info
+        except (AttributeError, TypeError, ValueError):
+            # Create minimal command info for problematic subcommands
+            subcommands[cmd_name] = commandinfo.CommandInfo(name=cmd_name)
 
     return commandinfo.CommandInfo(
         name=name,
-        description=description,
+        description=app.help,
         usage=usage,
         params=params,
         subcommands=subcommands,
-        hidden=hidden,
-        epilog=epilog,
-        callback=callback,
+        hidden=not app.show,
+        epilog=getattr(app, "epilog", None),
+        callback=app.default_command,
     )
 
 
@@ -190,10 +165,8 @@ def get_info(instance: Any, command: str | None = None) -> commandinfo.CommandIn
                 info = info.subcommands[cmd]
             else:
                 # Command not found, return empty info
-                return commandinfo.CommandInfo(
-                    name=cmd,
-                    description=f"Command '{cmd}' not found",
-                )
+                desc = f"Command '{cmd}' not found"
+                return commandinfo.CommandInfo(name=cmd, description=desc)
 
     return info
 
