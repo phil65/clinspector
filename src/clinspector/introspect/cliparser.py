@@ -3,7 +3,8 @@ from enum import Enum
 import re
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
+from schemez import Schema
 
 
 class ArgumentType(str, Enum):
@@ -28,10 +29,8 @@ class ArgumentStyle(str, Enum):
     WINDOWS = "windows"  # /help
 
 
-class CLIOption(BaseModel):
+class CLIOption(Schema):
     """Represents a CLI option/flag."""
-
-    model_config = ConfigDict(use_attribute_docstrings=True)
 
     name: str
     short_flag: str | None = None
@@ -52,10 +51,8 @@ class CLIOption(BaseModel):
     """Whether multiple values are allowed"""
 
 
-class CLIPositionalArg(BaseModel):
+class CLIPositionalArg(Schema):
     """Represents a positional argument."""
-
-    model_config = ConfigDict(use_attribute_docstrings=True)
 
     name: str
     description: str = ""
@@ -70,10 +67,8 @@ class CLIPositionalArg(BaseModel):
     """Possible values for choice type"""
 
 
-class CLISubcommand(BaseModel):
+class CLISubcommand(Schema):
     """Represents a subcommand in the CLI."""
-
-    model_config = ConfigDict(use_attribute_docstrings=True)
 
     name: str
     description: str = ""
@@ -86,10 +81,8 @@ class CLISubcommand(BaseModel):
     """Nested subcommands"""
 
 
-class CLIInterface(BaseModel):
+class CLIInterface(Schema):
     """Root model representing the entire CLI interface."""
-
-    model_config = ConfigDict(use_attribute_docstrings=True)
 
     program_name: str
     description: str = ""
@@ -130,11 +123,8 @@ class CLIHelpParser:
         """Parse CLI help text and return a structured interface description."""
         lines = help_text.split("\n")
         program_name = self._extract_program_name(lines[0])
-
-        cli = CLIInterface(
-            program_name=program_name,
-            description=self._extract_description(lines),
-        )
+        desc = self._extract_description(lines)
+        cli = CLIInterface(program_name=program_name, description=desc)
 
         current_section = ""
         for line in lines:
@@ -157,17 +147,16 @@ class CLIHelpParser:
 
     def _extract_program_name(self, first_line: str) -> str:
         """Extract program name from the first line of help text."""
-        words = first_line.split()
-        return words[0] if words else "unknown"
+        return words[0] if (words := first_line.split()) else "unknown"
 
     def _extract_description(self, lines: list[str]) -> str:
         """Extract program description from help text."""
-        description_lines = []
-        for line in lines[1:]:
-            if line.strip().lower() in ("options:", "commands:"):
-                break
-            if line.strip():
-                description_lines.append(line.strip())
+        description_lines = [
+            stripped
+            for line in lines[1:]
+            if (stripped := line.strip())
+            and stripped.lower() not in ("options:", "commands:")
+        ]
         return " ".join(description_lines)
 
     def _parse_option_line(self, line: str, cli: CLIInterface) -> None:
@@ -198,14 +187,8 @@ class CLIHelpParser:
         if not match:
             return
 
-        name, _args, description = match.groups()
-
-        subcommand = CLISubcommand(
-            name=name,
-            description=description or "",
-        )
-
-        cli.subcommands[name] = subcommand
+        name, _args, desc = match.groups()
+        cli.subcommands[name] = CLISubcommand(name=name, description=desc or "")
 
     def _determine_arg_type(self, arg_hint: str) -> ArgumentType:
         """Determine argument type based on hint in help text."""

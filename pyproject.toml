@@ -25,6 +25,7 @@ classifiers = [
 ]
 dependencies = [
   # Only add below (Copier)
+  "schemez>=0.3.0",
 ]
 
 [project.urls]
