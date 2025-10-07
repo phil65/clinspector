@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# Only import Jinja2 when needed
 import importlib.util
 from typing import Any
 
@@ -18,11 +17,8 @@ def _get_jinja_env():
 
     from jinja2 import Environment, select_autoescape
 
-    env = Environment(
-        autoescape=select_autoescape(["html", "xml"]),
-        trim_blocks=True,
-        lstrip_blocks=True,
-    )
+    escape = select_autoescape(["html", "xml"])
+    env = Environment(autoescape=escape, trim_blocks=True, lstrip_blocks=True)
 
     # Add custom filters
     env.filters["md_style"] = lambda text, bold=False, italic=False: (
@@ -83,7 +79,9 @@ _OUTPUT_TEMPLATE = """
 
 
 def get_cmd_markdown(
-    instance: Any, command: str | None = None, include_subcommands: bool = False
+    instance: Any,
+    command: str | None = None,
+    include_subcommands: bool = False,
 ) -> str:
     """Generate markdown documentation for a command.
 
@@ -95,12 +93,10 @@ def get_cmd_markdown(
     Returns:
         Formatted markdown string with command documentation
     """
-    # Get command info
     info = get_cmd_info(instance, command)
     if not info:
         return ""
 
-    # Setup Jinja environment
     env = _get_jinja_env()
 
     # Define render function for templates to use
@@ -109,11 +105,7 @@ def get_cmd_markdown(
         return template.render(**kwargs)
 
     env.filters["render"] = render_template
-
-    # Prepare the main template
-    template = env.from_string(_OUTPUT_TEMPLATE)
-
-    # Render the template
+    template = env.from_string(_OUTPUT_TEMPLATE)  # Prepare the main template
     return template.render(
         info=info,
         include_subcommands=include_subcommands,
