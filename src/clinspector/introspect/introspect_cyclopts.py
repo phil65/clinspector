@@ -8,6 +8,9 @@ from typing import Any, Literal
 from clinspector.models import commandinfo, param
 
 
+ParamType = Literal["option", "parameter", "argument"]
+
+
 def _extract_params_from_app(app: Any) -> list[param.Param]:
     """Extract parameters from a cyclopts App's default command.
 
@@ -40,21 +43,15 @@ def _extract_params_from_app(app: Any) -> list[param.Param]:
 
             # Build option names if not positional
             if not is_positional:
-                option_name = getattr(parameter, "option_name", None)
-                if option_name:
-                    if len(option_name) == 1:
-                        opts.append(f"-{option_name}")
-                    else:
-                        opts.append(f"--{option_name}")
+                if name := getattr(parameter, "option_name", None):
+                    label = f"-{name}" if len(name) == 1 else f"--{name}"
                 else:
                     # Derive from field name
-                    field_name = field_info.name.replace("_", "-")
-                    opts.append(f"--{field_name}")
+                    label = "--" + field_info.name.replace("_", "-")
+                opts.append(label)
 
             # Determine parameter type
-            param_type_name: Literal["option", "parameter", "argument"] = (
-                "argument" if is_positional else "option"
-            )
+            param_type_name: ParamType = "argument" if is_positional else "option"
 
             # Check if it's a flag (boolean with no value)
             is_flag = False
@@ -62,23 +59,21 @@ def _extract_params_from_app(app: Any) -> list[param.Param]:
                 # Simple check for boolean type
                 annotation_str = str(field_info.annotation)
                 is_flag = "bool" in annotation_str.lower()
-
-            params.append(
-                param.Param(
-                    name=field_info.name,
-                    help=getattr(parameter, "help", None)
-                    or getattr(field_info, "description", None),
-                    default=getattr(field_info, "default", None),
-                    required=getattr(parameter, "required", False),
-                    opts=opts,
-                    is_flag=is_flag,
-                    param_type_name=param_type_name,
-                    multiple=getattr(parameter, "multiple", False),
-                    hidden=not getattr(parameter, "show", True),
-                    metavar=getattr(parameter, "metavar", None),
-                    envvar=getattr(parameter, "env_var", None),
-                )
+            p = param.Param(
+                name=field_info.name,
+                help=getattr(parameter, "help", None)
+                or getattr(field_info, "description", None),
+                default=getattr(field_info, "default", None),
+                required=getattr(parameter, "required", False),
+                opts=opts,
+                is_flag=is_flag,
+                param_type_name=param_type_name,
+                multiple=getattr(parameter, "multiple", False),
+                hidden=not getattr(parameter, "show", True),
+                metavar=getattr(parameter, "metavar", None),
+                envvar=getattr(parameter, "env_var", None),
             )
+            params.append(p)
 
     except (AttributeError, TypeError, ValueError):
         # Fallback: try to inspect the function signature directly
@@ -92,15 +87,13 @@ def _extract_params_from_app(app: Any) -> list[param.Param]:
                     else None
                 )
                 required = param_obj.default == inspect.Parameter.empty
-
-                params.append(
-                    param.Param(
-                        name=param_name,
-                        default=default_val,
-                        required=required,
-                        param_type_name="argument",
-                    )
+                p = param.Param(
+                    name=param_name,
+                    default=default_val,
+                    required=required,
+                    param_type_name="argument",
                 )
+                params.append(p)
         except (AttributeError, TypeError, ValueError):
             params = []
 
@@ -155,10 +148,7 @@ def _parse_app(app: Any, parent_name: str = "") -> commandinfo.CommandInfo:
                 subcommands[cmd_name] = sub_info
             except (AttributeError, TypeError, ValueError):
                 # Create minimal command info for problematic subcommands
-                subcommands[cmd_name] = commandinfo.CommandInfo(
-                    name=cmd_name,
-                    description="",
-                )
+                subcommands[cmd_name] = commandinfo.CommandInfo(name=cmd_name)
 
     # Check if hidden
     hidden = not getattr(app, "show", True)
@@ -181,10 +171,7 @@ def _parse_app(app: Any, parent_name: str = "") -> commandinfo.CommandInfo:
     )
 
 
-def get_info(
-    instance: Any,
-    command: str | None = None,
-) -> commandinfo.CommandInfo:
+def get_info(instance: Any, command: str | None = None) -> commandinfo.CommandInfo:
     """Return a CommandInfo object for command of given cyclopts App.
 
     Args:
