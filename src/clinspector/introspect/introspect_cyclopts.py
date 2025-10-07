@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 import inspect
-from typing import Any, Literal
-
-from cyclopts import App
+from typing import TYPE_CHECKING, Any, Literal
 
 from clinspector.models import commandinfo, param
+
+
+if TYPE_CHECKING:
+    from cyclopts import App
 
 
 ParamType = Literal["option", "parameter", "argument"]
 
 
-def _extract_params_from_app(app: Any) -> list[param.Param]:
+def _extract_params_from_app(app: App) -> list[param.Param]:
     """Extract parameters from a cyclopts App's default command.
 
     Args:
@@ -37,15 +39,16 @@ def _extract_params_from_app(app: Any) -> list[param.Param]:
             # Extract option strings
             opts: list[str] = []
             # Handle negative boolean flags
-            if hasattr(parameter, "negative_bool") and parameter.negative_bool:
+            if parameter.negative_bool:
                 opts.extend(f"--{name}" for name in parameter.negative_bool)
 
             # Check if it's a positional argument or option
-            is_positional = not opts and not getattr(parameter, "option_name", None)
+            option_name = getattr(parameter, "option_name", None)
+            is_positional = not opts and not option_name
 
             # Build option names if not positional
             if not is_positional:
-                if name := getattr(parameter, "option_name", None):
+                if name := option_name:
                     label = f"-{name}" if len(name) == 1 else f"--{name}"
                 else:
                     # Derive from field name
@@ -54,26 +57,21 @@ def _extract_params_from_app(app: Any) -> list[param.Param]:
 
             # Determine parameter type
             param_type_name: ParamType = "argument" if is_positional else "option"
-
-            # Check if it's a flag (boolean with no value)
-            is_flag = False
-            if hasattr(field_info, "annotation"):
-                # Simple check for boolean type
-                annotation_str = str(field_info.annotation)
-                is_flag = "bool" in annotation_str.lower()
+            # Simple check for boolean type
             p = param.Param(
                 name=field_info.name,
-                help=getattr(parameter, "help", None)
-                or getattr(field_info, "description", None),
-                default=getattr(field_info, "default", None),
-                required=getattr(parameter, "required", False),
+                help=parameter.help or getattr(field_info, "description", None),
+                default=field_info.default,
+                required=parameter.required or False,
                 opts=opts,
-                is_flag=is_flag,
+                is_flag="bool" in str(field_info.annotation).lower(),
                 param_type_name=param_type_name,
                 multiple=getattr(parameter, "multiple", False),
-                hidden=not getattr(parameter, "show", True),
+                hidden=not parameter.show,
                 metavar=getattr(parameter, "metavar", None),
-                envvar=getattr(parameter, "env_var", None),
+                envvar=env_var
+                if isinstance((env_var := parameter.env_var), str | None)
+                else None,
             )
             params.append(p)
 
