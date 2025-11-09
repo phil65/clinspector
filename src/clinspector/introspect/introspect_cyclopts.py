@@ -5,6 +5,8 @@ from __future__ import annotations
 import inspect
 from typing import TYPE_CHECKING, Any, Literal
 
+from cyclopts.command_spec import CommandSpec
+
 from clinspector.models import commandinfo, param
 
 
@@ -126,7 +128,11 @@ def _parse_app(app: App, parent_name: str = "") -> commandinfo.CommandInfo:
         if (cmd_name in app.help_flags) or (cmd_name in app.version_flags):
             continue
         try:
-            sub_info = _parse_app(sub_app, full_name)
+            if isinstance(sub_app, CommandSpec):
+                resolved = sub_app.resolve(app)
+                sub_info = _parse_app(resolved, full_name)
+            else:
+                sub_info = _parse_app(sub_app, full_name)
             subcommands[cmd_name] = sub_info
         except (AttributeError, TypeError, ValueError):
             # Create minimal command info for problematic subcommands
