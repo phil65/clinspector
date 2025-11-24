@@ -28,8 +28,7 @@ def _parse_command(command: Command) -> commandinfo.CommandInfo:
             name=option.name,
             help=option.description,
             default=option.default,
-            opts=[f"--{option.name}"]
-            + ([f"-{option.shortcut}"] if option.shortcut else []),
+            opts=[f"--{option.name}"] + ([f"-{option.shortcut}"] if option.shortcut else []),
             # required=option.required,
             is_flag=option._flag,
             multiple=option._is_list,
@@ -56,9 +55,7 @@ def parse(app: Application) -> commandinfo.CommandInfo:
 
     # Build subcommands dict
     subcommands = {
-        name: _parse_command(cmd)
-        for name, cmd in app._commands.items()
-        if name != default_cmd_name
+        name: _parse_command(cmd) for name, cmd in app._commands.items() if name != default_cmd_name
     }
 
     return commandinfo.CommandInfo(

@@ -154,8 +154,7 @@ class CLIHelpParser:
         description_lines = [
             stripped
             for line in lines[1:]
-            if (stripped := line.strip())
-            and stripped.lower() not in ("options:", "commands:")
+            if (stripped := line.strip()) and stripped.lower() not in ("options:", "commands:")
         ]
         return " ".join(description_lines)
 

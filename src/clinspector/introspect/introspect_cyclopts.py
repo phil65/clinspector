@@ -71,9 +71,7 @@ def _extract_params_from_app(app: App) -> list[param.Param]:
                 multiple=getattr(parameter, "multiple", False),
                 hidden=not parameter.show,
                 metavar=getattr(parameter, "metavar", None),
-                envvar=env_var
-                if isinstance((env_var := parameter.env_var), str | None)
-                else None,
+                envvar=env_var if isinstance((env_var := parameter.env_var), str | None) else None,
             )
             params.append(p)
 
@@ -84,9 +82,7 @@ def _extract_params_from_app(app: App) -> list[param.Param]:
             params = []
             for param_name, param_obj in sig.parameters.items():
                 default_val = (
-                    param_obj.default
-                    if param_obj.default != inspect.Parameter.empty
-                    else None
+                    param_obj.default if param_obj.default != inspect.Parameter.empty else None
                 )
                 required = param_obj.default == inspect.Parameter.empty
                 p = param.Param(

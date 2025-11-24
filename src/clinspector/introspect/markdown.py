@@ -9,10 +9,7 @@ from clinspector import get_cmd_info
 def _get_jinja_env():
     """Get a configured Jinja2 environment."""
     if not importlib.util.find_spec("jinja2"):
-        msg = (
-            "jinja2 is required for markdown generation. "
-            "Install with 'pip install jinja2'"
-        )
+        msg = "jinja2 is required for markdown generation. Install with 'pip install jinja2'"
         raise ImportError(msg)
 
     from jinja2 import Environment, select_autoescape

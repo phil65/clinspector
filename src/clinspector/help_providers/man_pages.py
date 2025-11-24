@@ -97,9 +97,7 @@ class ManPageProvider(HelpProvider):
         # Join description paragraphs with newlines
         description = "\n\n".join(description_lines)
 
-        return CommandHelp(
-            name=name, description=description, examples=examples, platform="linux"
-        )
+        return CommandHelp(name=name, description=description, examples=examples, platform="linux")
 
     async def get_command_help(self, command: str) -> CommandHelp:
         """Get man page for a command."""
