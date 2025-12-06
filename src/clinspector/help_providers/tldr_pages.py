@@ -35,7 +35,7 @@ class TldrExample:
 class TldrProvider(HelpProvider):
     """Provider for tldr-pages help."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize provider."""
         self._cache_initialized = False
         self._init_lock = asyncio.Lock()
@@ -48,7 +48,7 @@ class TldrProvider(HelpProvider):
 
         return tldr
 
-    async def _ensure_cache(self):
+    async def _ensure_cache(self) -> None:
         """Initialize cache if needed."""
         if self._cache_initialized:
             return
@@ -139,7 +139,7 @@ class TldrProvider(HelpProvider):
 
 if __name__ == "__main__":
 
-    async def main():
+    async def main() -> None:
         provider = TldrProvider()
         commands = await provider.list_commands()
         print(commands[:10])  # Print first 10 for testing

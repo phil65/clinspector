@@ -35,7 +35,7 @@ class CommandInfo:
     _parent: CommandInfo | None = dataclasses.field(default=None, repr=False)
     """Reference to parent command (internal use)."""
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Set parent references for all subcommands."""
         for subcmd in self.subcommands.values():
             subcmd._parent = self

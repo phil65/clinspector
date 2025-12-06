@@ -74,7 +74,7 @@ def create_class(cmd_info: CommandInfo) -> type[Any]:
     )
 
     # Create the callback first
-    def dummy_callback(**kwargs: Any):
+    def dummy_callback(**kwargs: Any) -> None:
         """Placeholder callback."""
         print(f"Called {cmd_info.name} with: {kwargs}")
 

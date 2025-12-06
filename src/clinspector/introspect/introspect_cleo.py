@@ -104,7 +104,7 @@ if __name__ == "__main__":
             )
         ]
 
-        def handle(self):
+        def handle(self) -> None:
             name = self.argument("name")
             text = f"Hello {name}" if name else "Hello"
             if self.option("yell"):

@@ -53,7 +53,7 @@ class ManPageProvider(HelpProvider):
         description_lines: list[str] = []
         current_paragraph: list[str] = []
 
-        def flush_paragraph():
+        def flush_paragraph() -> None:
             """Join collected lines into a clean paragraph."""
             if current_paragraph:
                 text = " ".join(current_paragraph).strip()
@@ -127,7 +127,7 @@ class ManPageProvider(HelpProvider):
 
 if __name__ == "__main__":
 
-    async def main():
+    async def main() -> None:
         provider = ManPageProvider()
         print(await provider.list_commands())
 

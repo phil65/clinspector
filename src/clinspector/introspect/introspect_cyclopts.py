@@ -179,7 +179,7 @@ if __name__ == "__main__":
         app = cyclopts.App(name="example", help="Example cyclopts application")
 
         @app.default
-        def main(name: str = "World", count: int = 1, verbose: bool = False):
+        def main(name: str = "World", count: int = 1, verbose: bool = False) -> None:
             """Main command that greets someone."""
             for _ in range(count):
                 greeting = f"Hello, {name}!"
@@ -189,7 +189,7 @@ if __name__ == "__main__":
                     print(greeting)
 
         @app.command
-        def subcommand(arg: str, flag: bool = False):
+        def subcommand(arg: str, flag: bool = False) -> None:
             """A subcommand example."""
             print(f"Subcommand called with arg={arg}, flag={flag}")
 
