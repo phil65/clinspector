@@ -4,15 +4,9 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from functools import cached_property
 import re
-from typing import TYPE_CHECKING
 
 from clinspector.help_providers.base import CommandHelp, Example, HelpProvider
-
-
-if TYPE_CHECKING:
-    from types import ModuleType
 
 
 @dataclass
@@ -41,21 +35,16 @@ class TldrProvider(HelpProvider):
         self._init_lock = asyncio.Lock()
         self._loop = asyncio.get_event_loop()
 
-    @cached_property
-    def _client(self) -> ModuleType:
-        """Lazy load the tldr client module."""
-        import tldr
-
-        return tldr
-
     async def _ensure_cache(self) -> None:
         """Initialize cache if needed."""
+        import tldr
+
         if self._cache_initialized:
             return
 
         async with self._init_lock:
             if not self._cache_initialized:
-                await self._loop.run_in_executor(None, self._client.update_cache)
+                await self._loop.run_in_executor(None, tldr.update_cache)
                 self._cache_initialized = True
 
     def _clean_command_name(self, cmd: str) -> str:
@@ -95,10 +84,12 @@ class TldrProvider(HelpProvider):
 
     async def get_command_help(self, command: str) -> CommandHelp:
         """Get help for a command from tldr."""
+        import tldr
+
         await self._ensure_cache()
 
-        def get_page(platform: str) -> list[bytes] | None:
-            return self._client.get_page_for_platform(command, platform, None, "en")
+        def get_page(platform: str) -> list[str]:
+            return tldr.get_page_for_platform(command, platform, None, "en")
 
         for platform_name in ["common", "windows", "linux", "osx"]:
             try:
@@ -114,9 +105,10 @@ class TldrProvider(HelpProvider):
 
     async def search_commands(self, query: str) -> list[str]:
         """Search for commands matching query."""
-        await self._ensure_cache()
+        import tldr
 
-        commands = await self._loop.run_in_executor(None, self._client.get_commands)
+        await self._ensure_cache()
+        commands = await self._loop.run_in_executor(None, tldr.get_commands)
         return [
             self._clean_command_name(cmd)
             for cmd in commands
@@ -125,8 +117,10 @@ class TldrProvider(HelpProvider):
 
     async def list_commands(self) -> list[str]:
         """List all available commands."""
+        import tldr
+
         await self._ensure_cache()
-        commands = await self._loop.run_in_executor(None, self._client.get_commands)
+        commands = await self._loop.run_in_executor(None, tldr.get_commands)
         return [self._clean_command_name(cmd) for cmd in commands]
 
 

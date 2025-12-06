@@ -5,7 +5,7 @@ import argparse
 from clinspector.models import commandinfo, param
 
 
-def parse(parser: argparse.ArgumentParser):
+def parse(parser: argparse.ArgumentParser) -> commandinfo.CommandInfo:
     """Recursively parse an ArgumentParser instance and return a `CommandInfo` object."""
     try:
         subparse_action = next(
@@ -52,11 +52,3 @@ def get_info(
         for cmd in command.split("."):
             info = info[cmd]
     return info
-
-
-if __name__ == "__main__":
-    from _griffe import cli
-
-    parser = cli.get_parser()
-    info = get_info(parser, "check")
-    print(info)

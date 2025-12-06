@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import importlib.util
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from clinspector import get_cmd_info
 
 
-def _get_jinja_env():
+if TYPE_CHECKING:
+    from jinja2 import Environment
+
+
+def _get_jinja_env() -> Environment:
     """Get a configured Jinja2 environment."""
     if not importlib.util.find_spec("jinja2"):
         msg = "jinja2 is required for markdown generation. Install with 'pip install jinja2'"
@@ -97,7 +101,7 @@ def get_cmd_markdown(
     env = _get_jinja_env()
 
     # Define render function for templates to use
-    def render_template(template_str, **kwargs):
+    def render_template(template_str: str, **kwargs: Any) -> str:
         template = env.from_string(template_str)
         return template.render(**kwargs)
 

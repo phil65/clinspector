@@ -101,13 +101,13 @@ class CLIInterface(Schema):
 class ParserPatterns:
     """Common regex patterns for parsing CLI help text."""
 
-    option_pattern: re.Pattern = re.compile(
+    option_pattern: re.Pattern[str] = re.compile(
         r"(?:(-[a-zA-Z]),\s+)?(--[a-zA-Z-]+)?\s*(?:<([^>]+)>|\[([^\]]+)\])?\s*(.*)",
     )
-    positional_pattern: re.Pattern = re.compile(
+    positional_pattern: re.Pattern[str] = re.compile(
         r"([A-Z_]+(?:\s+[A-Z_]+)*)\s+(?:\(([^)]+)\))?\s*(.*)",
     )
-    subcommand_pattern: re.Pattern = re.compile(
+    subcommand_pattern: re.Pattern[str] = re.compile(
         r"^\s*(\w+)(?:\s+([^:\n]+))(?::\s*(.*))?$",
         re.MULTILINE,
     )

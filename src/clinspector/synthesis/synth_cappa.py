@@ -91,7 +91,7 @@ def create_class(cmd_info: CommandInfo) -> type[Any]:
             if param.opts:  # It's an option
                 opt_type: type[str | list[str] | bool]
                 if param.multiple:
-                    opt_type = list[str]  # type: ignore
+                    opt_type = list[str]
                 elif param.is_flag:
                     opt_type = bool
                 else:
@@ -117,7 +117,7 @@ def create_class(cmd_info: CommandInfo) -> type[Any]:
                 ]
             else:  # It's a positional argument
                 arg_type: type[str | list[str]]
-                arg_type = list[str] if param.multiple else str  # type: ignore
+                arg_type = list[str] if param.multiple else str
                 arg = cappa.Arg(
                     help=param.help,
                     required=param.required,
@@ -125,7 +125,7 @@ def create_class(cmd_info: CommandInfo) -> type[Any]:
                 )
                 locals()[param.name] = typing.Annotated[arg_type, arg]
 
-    return DynamicCommand  # type: ignore
+    return DynamicCommand
 
 
 if __name__ == "__main__":

@@ -50,7 +50,7 @@ def _create_callback(
             option_kwargs = _param_to_option(param)
             del option_kwargs["default"]  # Remove default from kwargs
             if param.multiple:
-                param_type = list[str]  # type: ignore
+                param_type = list[str]
             elif param.is_flag:
                 param_type = bool
             default_or_param = typer.Option(param.default, *param.opts, **option_kwargs)
@@ -61,7 +61,7 @@ def _create_callback(
                 "hidden": param.hidden,
             }
             if param.multiple:
-                param_type = list[str]  # type: ignore
+                param_type = list[str]
             default_or_param = typer.Argument(param.default, **arg_kwargs)  # type: ignore
 
         import inspect
