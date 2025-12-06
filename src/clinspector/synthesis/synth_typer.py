@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from typing import TYPE_CHECKING, Any
 
 import typer
@@ -56,16 +57,10 @@ def _create_callback(
             default_or_param = typer.Option(param.default, *param.opts, **option_kwargs)
         else:
             # It's an argument - use typer.Argument
-            arg_kwargs = {
-                "help": param.help,
-                "hidden": param.hidden,
-            }
+            arg_kwargs = {"help": param.help, "hidden": param.hidden}
             if param.multiple:
                 param_type = list[str]
             default_or_param = typer.Argument(param.default, **arg_kwargs)  # type: ignore
-
-        import inspect
-
         params.append(
             inspect.Parameter(
                 name=param.name,
@@ -135,38 +130,12 @@ if __name__ == "__main__":
     from clinspector.models.param import Param
 
     # Example usage
-    info = CommandInfo(
-        name="mycli",
-        description="A sample CLI",
-        params=[
-            Param(
-                name="verbose",
-                help="Increase verbosity",
-                is_flag=True,
-                opts=["-v", "--verbose"],
-            )
-        ],
-        subcommands={
-            "hello": CommandInfo(
-                name="hello",
-                description="Say hello",
-                params=[
-                    Param(
-                        name="name",
-                        help="Name to greet",
-                        required=True,
-                    ),
-                    Param(
-                        name="count",
-                        help="Number of greetings",
-                        opts=["--count", "-c"],
-                        default=1,
-                    ),
-                ],
-            )
-        },
-    )
-
+    sub_params = [
+        Param(name="name", help="Name to greet", required=True),
+        Param(name="count", help="Number of greetings", opts=["--count", "-c"], default=1),
+    ]
+    params = [Param(name="verbose", help="Increase verbosity", is_flag=True, opts=["-v"])]
+    sub_cmds = {"hello": CommandInfo(name="hello", description="Say hello", params=sub_params)}
+    info = CommandInfo(name="mycli", description="Sample CLI", params=params, subcommands=sub_cmds)
     app = create_app(info)
-    if __name__ == "__main__":
-        app()
+    app()

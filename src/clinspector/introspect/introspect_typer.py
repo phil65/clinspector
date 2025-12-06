@@ -12,10 +12,7 @@ if TYPE_CHECKING:
     from clinspector.models import commandinfo
 
 
-def get_info(
-    instance: typer.Typer,
-    command: str | None = None,
-) -> commandinfo.CommandInfo:
+def get_info(instance: typer.Typer, command: str | None = None) -> commandinfo.CommandInfo:
     """Return a `CommmandInfo` object for command of given Typer object.
 
     Args:

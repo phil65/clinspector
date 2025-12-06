@@ -20,7 +20,6 @@ def _get_jinja_env() -> Environment:
 
     escape = select_autoescape(["html", "xml"])
     env = Environment(autoescape=escape, trim_blocks=True, lstrip_blocks=True)
-
     # Add custom filters
     env.filters["md_style"] = lambda text, bold=False, italic=False: (
         f"**{text}**" if bold else (f"*{text}*" if italic else text)

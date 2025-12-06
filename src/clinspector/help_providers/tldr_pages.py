@@ -90,7 +90,7 @@ class TldrProvider(HelpProvider):
         await self._ensure_cache()
 
         def get_page(platform: str) -> list[bytes]:
-            return cast(list[bytes], tldr.get_page_for_platform(command, platform, None, "en"))
+            return cast(list[bytes], tldr.get_page_for_platform(command, platform, None, "en"))  # pyright: ignore[reportArgumentType]
 
         for platform_name in ["common", "windows", "linux", "osx"]:
             try:

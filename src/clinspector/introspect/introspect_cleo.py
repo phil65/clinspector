@@ -49,28 +49,19 @@ def _parse_command(command: Command) -> commandinfo.CommandInfo:
 
 def parse(app: Application) -> commandinfo.CommandInfo:
     """Parse a Cleo Application into a CommandInfo object."""
-    # Get the default command (usually "list")
-    default_cmd_name = app._default_command
+    default_cmd_name = app._default_command  # Get the default command (usually "list")
     default_cmd = app._commands[default_cmd_name]  # Get actual command object
-
-    # Build subcommands dict
-    subcommands = {
-        name: _parse_command(cmd) for name, cmd in app._commands.items() if name != default_cmd_name
-    }
-
+    sub_cmds = {n: _parse_command(cmd) for n, cmd in app._commands.items() if n != default_cmd_name}
     return commandinfo.CommandInfo(
         name=app.name or "",
         description=app.long_version or "",
         # usage=app.definition,  # TODO
-        subcommands=subcommands,
+        subcommands=sub_cmds,
         params=_parse_command(default_cmd).params,
     )
 
 
-def get_info(
-    instance: Application,
-    command: str | None = None,
-) -> commandinfo.CommandInfo:
+def get_info(instance: Application, command: str | None = None) -> commandinfo.CommandInfo:
     """Return a CommandInfo object for command of given Cleo Application.
 
     Args:

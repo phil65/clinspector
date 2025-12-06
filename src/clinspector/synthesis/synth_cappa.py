@@ -45,16 +45,11 @@ def _create_param_field(
         arg_kwargs.update({"short": short, "long": long})
 
     arg = cappa.Arg[Any](**arg_kwargs)
-
     # Create the field with proper metadata typing
     default_value: Any | _MISSING_TYPE = (
         param.default if param.default is not None else dataclasses.MISSING
     )
-    field: dataclasses.Field[Any] = dataclasses.field(
-        default=default_value,  # type: ignore
-        metadata={0: arg},
-    )
-
+    field: dataclasses.Field[Any] = dataclasses.field(default=default_value, metadata={0: arg})  # type: ignore
     return param.name, type_hint, field
 
 
@@ -68,10 +63,7 @@ def create_class(cmd_info: CommandInfo) -> type[Any]:
         A dataclass decorated with cappa.command
     """
     # Sort parameters - required ones first
-    sorted_params = sorted(
-        cmd_info.params,
-        key=lambda p: (p.default is not None, p.name),
-    )
+    sorted_params = sorted(cmd_info.params, key=lambda p: (p.default is not None, p.name))
 
     # Create the callback first
     def dummy_callback(**kwargs: Any) -> None:
@@ -79,11 +71,7 @@ def create_class(cmd_info: CommandInfo) -> type[Any]:
         print(f"Called {cmd_info.name} with: {kwargs}")
 
     # Create class with cappa's command decorator
-    @cappa.command(
-        name=cmd_info.name,
-        help=cmd_info.description,
-        invoke=dummy_callback,
-    )
+    @cappa.command(name=cmd_info.name, help=cmd_info.description, invoke=dummy_callback)
     class DynamicCommand:
         """Dynamic command class."""
 
@@ -129,74 +117,44 @@ def create_class(cmd_info: CommandInfo) -> type[Any]:
 
 
 if __name__ == "__main__":
+    import sys
+
     from clinspector.models.commandinfo import CommandInfo
     from clinspector.models.param import Param
 
     # Example usage
-    info = CommandInfo(
-        name="greet",
-        description="A greeting command",
-        params=[
-            Param(
-                name="name",
-                help="Name to greet",
-                required=True,
-            ),
-            Param(
-                name="count",
-                help="Number of greetings",
-                opts=["--count", "-c"],
-                default=1,
-            ),
-            Param(
-                name="excited",
-                help="Add exclamation marks",
-                is_flag=True,
-                opts=["--excited", "-e"],
-            ),
-        ],
-    )
-
-    GreetCommand = create_class(info)
-    # Now we can run it directly
-    if __name__ == "__main__":
-        import sys
-
-        sys.exit(GreetCommand())  # cappa adds __call__ to run the command
-
-
-if __name__ == "__main__":
-    from clinspector.models.commandinfo import CommandInfo
-    from clinspector.models.param import Param
-
-    # Example usage
-    info = CommandInfo(
-        name="greet",
-        description="A greeting command",
-        params=[
-            Param(
-                name="name",
-                help="Name to greet",
-                required=True,
-            ),
-            Param(
-                name="count",
-                help="Number of greetings",
-                opts=["--count", "-c"],
-                default=1,
-            ),
-            Param(
-                name="excited",
-                help="Add exclamation marks",
-                is_flag=True,
-                opts=["--excited", "-e"],
-            ),
-        ],
-    )
-
+    params = [
+        Param(name="name", help="Name to greet", required=True),
+        Param(name="count", help="Number of greetings", opts=["--count", "-c"], default=1),
+        Param(name="excited", help="Add exclamation marks", is_flag=True, opts=["--excited", "-e"]),
+    ]
+    info = CommandInfo(name="greet", description="A greeting command", params=params)
     GreetCommand = create_class(info)
 
-    if __name__ == "__main__":
-        import sys
+    sys.exit(GreetCommand())  # cappa adds __call__ to run the command
 
-        GreetCommand.run(sys.argv[1:])
+
+# if __name__ == "__main__":
+#     import sys
+
+#     from clinspector.models.commandinfo import CommandInfo
+#     from clinspector.models.param import Param
+
+#     # Example usage
+#     info = CommandInfo(
+#         name="greet",
+#         description="A greeting command",
+#         params=[
+#             Param(name="name", help="Name to greet", required=True),
+#             Param(name="count", help="Number of greetings", opts=["--count", "-c"], default=1),
+#             Param(
+#                 name="excited",
+#                 help="Add exclamation marks",
+#                 is_flag=True,
+#                 opts=["--excited", "-e"],
+#             ),
+#         ],
+#     )
+
+#     GreetCommand = create_class(info)
+#     GreetCommand.run(sys.argv[1:])

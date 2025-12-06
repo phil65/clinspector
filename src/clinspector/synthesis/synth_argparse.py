@@ -62,11 +62,8 @@ def create_parser(cmd_info: CommandInfo) -> argparse.ArgumentParser:
 
     # Add subcommands if any
     if cmd_info.subcommands:
-        subparsers = parser.add_subparsers(
-            title="commands",
-            dest="command",
-            required=bool(cmd_info.subcommands),  # Required if there are subcommands
-        )
+        required = bool(cmd_info.subcommands)  # Required if there are subcommands
+        subparsers = parser.add_subparsers(title="commands", dest="command", required=required)
         for name, subcmd in cmd_info.subcommands.items():
             subparser = subparsers.add_parser(
                 name,
@@ -98,47 +95,29 @@ def create_parser(cmd_info: CommandInfo) -> argparse.ArgumentParser:
 
 
 if __name__ == "__main__":
+    import sys
+
     from clinspector.models.commandinfo import CommandInfo
     from clinspector.models.param import Param
 
     # Example usage
+    param = Param(name="verbose", help="Increase verbosity", is_flag=True, opts=["-v", "--verbose"])
+    sub_cmd = CommandInfo(
+        name="hello",
+        description="Say hello",
+        params=[
+            Param(name="name", help="Name to greet", required=True),
+            Param(name="count", help="Number of greetings", opts=["--count", "-c"], default=1),
+        ],
+    )
     info = CommandInfo(
         name="mycli",
         description="A sample CLI",
-        params=[
-            Param(
-                name="verbose",
-                help="Increase verbosity",
-                is_flag=True,
-                opts=["-v", "--verbose"],
-            )
-        ],
-        subcommands={
-            "hello": CommandInfo(
-                name="hello",
-                description="Say hello",
-                params=[
-                    Param(
-                        name="name",
-                        help="Name to greet",
-                        required=True,
-                    ),
-                    Param(
-                        name="count",
-                        help="Number of greetings",
-                        opts=["--count", "-c"],
-                        default=1,
-                    ),
-                ],
-            )
-        },
+        params=[param],
+        subcommands={"hello": sub_cmd},
     )
 
     parser = create_parser(info)
-
-    # Test with sample arguments
-    import sys
-
     test_args = ["hello", "world", "--count", "3"]  # Sample command
     args = parser.parse_args(test_args if len(sys.argv) == 1 else sys.argv[1:])
     print(f"Parsed arguments: {args}")

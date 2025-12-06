@@ -129,37 +129,12 @@ if __name__ == "__main__":
     from clinspector.models.param import Param
 
     # Example usage
-    info = CommandInfo(
-        name="mycli",
-        description="A sample CLI",
-        params=[
-            Param(
-                name="verbose",
-                help="Increase verbosity",
-                is_flag=True,
-                opts=["-v", "--verbose"],
-            )
-        ],
-        subcommands={
-            "hello": CommandInfo(
-                name="hello",
-                description="Say hello",
-                params=[
-                    Param(
-                        name="name",
-                        help="Name to greet",
-                        required=True,
-                    ),
-                    Param(
-                        name="count",
-                        help="Number of greetings",
-                        opts=["--count", "-c"],
-                        default=1,
-                    ),
-                ],
-            )
-        },
-    )
-
+    params = [Param(name="verbose", help="Increase verbosity", is_flag=True, opts=["-v"])]
+    sub_params = [
+        Param(name="name", help="Name to greet", required=True),
+        Param(name="count", help="Number of greetings", opts=["--count", "-c"], default=1),
+    ]
+    sub_cmds = {"hello": CommandInfo(name="hello", description="Say hello", params=params)}
+    info = CommandInfo(name="mycli", description="Sample CLI", params=params, subcommands=sub_cmds)
     app = create_app(info)
     app.run()

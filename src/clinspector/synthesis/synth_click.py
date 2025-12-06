@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 
 def _create_param(param_info: Param) -> click.Parameter:
     """Convert a Param object to a Click Parameter."""
+    import click
+
     if param_info.opts:  # It's an option
         kwargs: dict[str, Any] = {
             "help": param_info.help,
@@ -28,24 +30,14 @@ def _create_param(param_info: Param) -> click.Parameter:
         }
         if param_info.metavar:
             kwargs["metavar"] = param_info.metavar
-
-        import click
-
         return click.Option(param_info.opts, **kwargs)
 
     # It's an argument
-    kwargs = {
-        "required": param_info.required,
-    }
+    kwargs = {"required": param_info.required}
     if param_info.multiple:
         kwargs["nargs"] = -1
     if param_info.metavar:
-        import click
-
         kwargs["type"] = click.STRING
-
-    import click
-
     return click.Argument([param_info.name], **kwargs)
 
 
@@ -54,10 +46,9 @@ def _create_command(
     callback: Callable[..., Any] | None = None,
 ) -> click.Command:
     """Create a Click Command from a CommandInfo object."""
-    params = [_create_param(p) for p in cmd_info.params]
-
     import click
 
+    params = [_create_param(p) for p in cmd_info.params]
     return click.Command(
         name=cmd_info.name,
         help=cmd_info.description,
@@ -69,10 +60,7 @@ def _create_command(
     )
 
 
-def create_group(
-    cmd_info: CommandInfo,
-    callback: Callable[..., Any] | None = None,
-) -> click.Group:
+def create_group(cmd_info: CommandInfo, callback: Callable[..., Any] | None = None) -> click.Group:
     """Create a Click Group from a CommandInfo object.
 
     Args:
@@ -109,29 +97,16 @@ if __name__ == "__main__":
         name="mycli",
         description="A sample CLI",
         params=[
-            Param(
-                name="verbose",
-                help="Increase verbosity",
-                is_flag=True,
-                opts=["-v", "--verbose"],
-            )
+            Param(name="verbose", help="Increase verbosity", is_flag=True, opts=["-v", "--verbose"])
         ],
         subcommands={
             "hello": CommandInfo(
                 name="hello",
                 description="Say hello",
-                params=[
-                    Param(
-                        name="name",
-                        help="Name to greet",
-                        required=True,
-                    )
-                ],
+                params=[Param(name="name", help="Name to greet", required=True)],
             )
         },
     )
 
     cli = create_group(info)
-
-    if __name__ == "__main__":
-        cli()
+    cli()
