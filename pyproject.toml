@@ -2,7 +2,7 @@
 
 [project]
 name = "clinspector"
-version = "1.0.1"
+version = "1.0.2"
 description = "A library to parse CLI output into structured data."
 readme = "README.md"
 requires-python = ">=3.13"
