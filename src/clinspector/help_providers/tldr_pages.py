@@ -91,25 +91,18 @@ class TldrProvider(HelpProvider):
         if current:
             examples.append(current.to_example())
 
-        return CommandHelp(
-            name=name,
-            description=description,
-            examples=examples,
-            platform=platform,
-        )
+        return CommandHelp(name=name, description=description, examples=examples, platform=platform)
 
     async def get_command_help(self, command: str) -> CommandHelp:
         """Get help for a command from tldr."""
         await self._ensure_cache()
 
+        def get_page(platform: str) -> list[bytes] | None:
+            return self._client.get_page_for_platform(command, platform, None, "en")
+
         for platform_name in ["common", "windows", "linux", "osx"]:
             try:
-                result = await self._loop.run_in_executor(
-                    None,
-                    lambda p=platform_name: self._client.get_page_for_platform(
-                        command, p, None, "en"
-                    ),
-                )
+                result = await self._loop.run_in_executor(None, get_page, platform_name)
                 if result:
                     return self._parse_page(result, platform_name)
             except Exception as exc:  # noqa: BLE001

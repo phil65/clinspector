@@ -104,12 +104,13 @@ if __name__ == "__main__":
             )
         ]
 
-        def handle(self) -> None:
+        def handle(self) -> int:
             name = self.argument("name")
             text = f"Hello {name}" if name else "Hello"
             if self.option("yell"):
                 text = text.upper()
             self.line(text)
+            return 0  # TODO: what to return here?
 
     app = Application()
     app.add(GreetCommand())

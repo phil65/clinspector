@@ -93,10 +93,8 @@ class ManPageProvider(HelpProvider):
 
         # Flush any remaining paragraph
         flush_paragraph()
-
         # Join description paragraphs with newlines
         description = "\n\n".join(description_lines)
-
         return CommandHelp(name=name, description=description, examples=examples, platform="linux")
 
     async def get_command_help(self, command: str) -> CommandHelp:
