@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 import re
+from typing import cast
 
 from clinspector.help_providers.base import CommandHelp, Example, HelpProvider
 
@@ -88,8 +89,8 @@ class TldrProvider(HelpProvider):
 
         await self._ensure_cache()
 
-        def get_page(platform: str) -> list[str]:
-            return tldr.get_page_for_platform(command, platform, None, "en")
+        def get_page(platform: str) -> list[bytes]:
+            return cast(list[bytes], tldr.get_page_for_platform(command, platform, None, "en"))
 
         for platform_name in ["common", "windows", "linux", "osx"]:
             try:
