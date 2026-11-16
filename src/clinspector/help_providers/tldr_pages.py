@@ -50,7 +50,7 @@ class TldrProvider(HelpProvider):
 
     def _clean_command_name(self, cmd: str) -> str:
         """Remove language suffix from command name."""
-        return cmd.split(" (")[0] if " (" in cmd else cmd
+        return cmd.split(" (", maxsplit=1)[0] if " (" in cmd else cmd
 
     def _parse_page(self, lines: list[bytes], platform: str = "") -> CommandHelp:
         """Parse a tldr page into CommandHelp."""

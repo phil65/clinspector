@@ -1,32 +1,14 @@
-from dataclasses import dataclass
-from enum import Enum
 import re
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import Field
 from schemez import Schema
 
 
-class ArgumentType(str, Enum):
-    """Supported argument types in CLI commands."""
-
-    STRING = "string"
-    INTEGER = "integer"
-    FLOAT = "float"
-    BOOLEAN = "boolean"
-    FILE_PATH = "file_path"
-    DIRECTORY_PATH = "directory_path"
-    CHOICE = "choice"
-    LIST = "list"
-
-
-class ArgumentStyle(str, Enum):
-    """Different styles of CLI arguments."""
-
-    POSIX_SINGLE = "posix_single"  # -h
-    POSIX_LONG = "posix_long"  # --help
-    GNU_STYLE = "gnu_style"  # --help=value
-    WINDOWS = "windows"  # /help
+ArgumentStyle = Literal["posix_single", "posix_long", "gnu_style", "windows"]
+ArgumentType = Literal[
+    "string", "integer", "float", "boolean", "file_path", "directory_path", "choice", "list"
+]
 
 
 class CLIOption(Schema):
@@ -41,7 +23,7 @@ class CLIOption(Schema):
     """Description of the option"""
     required: bool = False
     """Whether the option is required"""
-    arg_type: ArgumentType = ArgumentType.STRING
+    arg_type: ArgumentType = "string"
     """Type of the argument"""
     default_value: Any | None = None
     """Default value if any"""
@@ -59,7 +41,7 @@ class CLIPositionalArg(Schema):
     """Description of the positional argument"""
     required: bool = True
     """Whether the positional argument is required"""
-    arg_type: ArgumentType = ArgumentType.STRING
+    arg_type: ArgumentType = "string"
     """Type of the argument"""
     default_value: Any | None = None
     """Default value if any"""
@@ -97,27 +79,15 @@ class CLIInterface(Schema):
     """Available subcommands"""
 
 
-@dataclass
-class ParserPatterns:
-    """Common regex patterns for parsing CLI help text."""
-
-    option_pattern: re.Pattern[str] = re.compile(
-        r"(?:(-[a-zA-Z]),\s+)?(--[a-zA-Z-]+)?\s*(?:<([^>]+)>|\[([^\]]+)\])?\s*(.*)",
-    )
-    positional_pattern: re.Pattern[str] = re.compile(
-        r"([A-Z_]+(?:\s+[A-Z_]+)*)\s+(?:\(([^)]+)\))?\s*(.*)",
-    )
-    subcommand_pattern: re.Pattern[str] = re.compile(
-        r"^\s*(\w+)(?:\s+([^:\n]+))(?::\s*(.*))?$",
-        re.MULTILINE,
-    )
+OPTION_PATTERN = re.compile(
+    r"(?:(-[a-zA-Z]),\s+)?(--[a-zA-Z-]+)?\s*(?:<([^>]+)>|\[([^\]]+)\])?\s*(.*)",
+)
+POS_PATTERN = re.compile(r"([A-Z_]+(?:\s+[A-Z_]+)*)\s+(?:\(([^)]+)\))?\s*(.*)")
+SUBCMD_PATTERN = re.compile(r"^\s*(\w+)(?:\s+([^:\n]+))(?::\s*(.*))?$", re.MULTILINE)
 
 
 class CLIHelpParser:
     """Parser for CLI help text."""
-
-    def __init__(self) -> None:
-        self.patterns = ParserPatterns()
 
     def parse_help_text(self, help_text: str) -> CLIInterface:
         """Parse CLI help text and return a structured interface description."""
@@ -160,7 +130,7 @@ class CLIHelpParser:
 
     def _parse_option_line(self, line: str, cli: CLIInterface) -> None:
         """Parse a line containing option information."""
-        match = self.patterns.option_pattern.match(line.strip())
+        match = OPTION_PATTERN.match(line.strip())
         if not match:
             return
 
@@ -182,7 +152,7 @@ class CLIHelpParser:
 
     def _parse_subcommand_line(self, line: str, cli: CLIInterface) -> None:
         """Parse a line containing subcommand information."""
-        match = self.patterns.subcommand_pattern.match(line.strip())
+        match = SUBCMD_PATTERN.match(line.strip())
         if not match:
             return
 
@@ -193,12 +163,12 @@ class CLIHelpParser:
         """Determine argument type based on hint in help text."""
         hint = arg_hint.lower()
         if any(num_type in hint for num_type in ["number", "count", "int"]):
-            return ArgumentType.INTEGER
+            return "integer"
         if any(file_type in hint for file_type in ["file", "path"]):
-            return ArgumentType.FILE_PATH
+            return "file_path"
         if any(bool_type in hint for bool_type in ["bool", "flag"]):
-            return ArgumentType.BOOLEAN
-        return ArgumentType.STRING
+            return "boolean"
+        return "string"
 
 
 if __name__ == "__main__":

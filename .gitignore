@@ -30,3 +30,6 @@ junit.xml
 uv.lock
 # DiskCache cache file
 ./model_cache
+
+# Stakpak session files
+.stakpak/session*
