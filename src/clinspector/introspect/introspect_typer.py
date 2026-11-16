@@ -3,13 +3,80 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import typer
+from typer.core import TyperArgument, TyperOption
 from typer.main import get_command
 
-from clinspector.introspect import introspect_click
+from clinspector.models import commandinfo, param
 
 
 if TYPE_CHECKING:
-    from clinspector.models import commandinfo
+    from typer import _click
+
+
+def _parse_param(p: _click.Parameter) -> param.Param:
+    annotation = choices = None
+    if isinstance(p, TyperOption | TyperArgument):
+        annotation = p.type_descriptor.annotation
+        choices = p.type_descriptor.choices
+    opt = p if isinstance(p, TyperOption) else None
+    return param.Param(
+        name=p.name,
+        param_type_name=p.param_type_name,  # type: ignore[arg-type]
+        opts=p.opts,
+        secondary_opts=p.secondary_opts,
+        type={"name": getattr(annotation, "__name__", str(annotation))} if annotation else None,
+        required=p.required,
+        nargs=p.nargs,
+        multiple=p.multiple,
+        default=p.default,
+        envvar=p.envvar if isinstance(p.envvar, str) else None,
+        help=getattr(p, "help", None),
+        hidden=getattr(p, "hidden", False),
+        is_eager=p.is_eager,
+        metavar=p.metavar,
+        choices=[str(c) for c in choices] if choices is not None else None,
+        prompt=opt.prompt if opt else None,
+        is_flag=opt.is_flag if opt else False,
+        flag_value=opt.is_flag if opt else False,
+        count=opt.count if opt else False,
+    )
+
+
+def parse(
+    command: _click.Command,
+    parent: _click.Context | None = None,
+) -> commandinfo.CommandInfo:
+    """Get a `CommandInfo` dataclass for given Typer (vendored click) `Command`.
+
+    Args:
+        command: The `Command` to get info for.
+        parent: The optional parent context
+    """
+    ctx = command.context_class(command, parent=parent)
+    subcommands = getattr(command, "commands", {})
+    formatter = ctx.make_formatter()
+    pieces = command.collect_usage_pieces(ctx)
+    formatter.write_usage(ctx.command_path, " ".join(pieces), prefix="")
+    usage = formatter.getvalue().rstrip("\n")
+    # Generate the full usage string based on parents if any, i.e. `root sub1 sub2 ...`.
+    full_path = []
+    current: _click.Context | None = ctx
+    while current is not None:
+        name = current.command.name.lower() if current.command.name else ""
+        full_path.append(name)
+        current = current.parent
+    full_path.reverse()
+    return commandinfo.CommandInfo(
+        name=command.name or "",
+        description=command.help or command.short_help or "",
+        usage=" ".join(full_path) + usage,
+        params=[_parse_param(p) for p in command.get_params(ctx)],
+        subcommands={k: parse(v, parent=ctx) for k, v in subcommands.items()},
+        deprecated=bool(command.deprecated),
+        epilog=command.epilog,
+        hidden=command.hidden,
+        callback=command.callback,
+    )
 
 
 def get_info(instance: typer.Typer, command: str | None = None) -> commandinfo.CommandInfo:
@@ -20,11 +87,11 @@ def get_info(instance: typer.Typer, command: str | None = None) -> commandinfo.C
         command: The command to get info for.
     """
     cmd = get_command(instance)
-    info = introspect_click.parse(cmd)
+    info = parse(cmd)
     if command:
         ctx = typer.Context(cmd)
         subcommands = getattr(cmd, "commands", {})
-        cmds = {k: introspect_click.parse(v, parent=ctx) for k, v in subcommands.items()}
+        cmds = {k: parse(v, parent=ctx) for k, v in subcommands.items()}
         return cmds.get(command, info)
     return info
 
