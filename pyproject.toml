@@ -46,6 +46,7 @@ cleo = ["cleo"]
 click = ["click"]
 cyclopts = ["cyclopts"]
 man-pages = ["hishel>=0.1.1", "httpx"]
+markdown = ["jinja2"]
 tldr = ["tldr"]
 typer = ["typer"]
 
