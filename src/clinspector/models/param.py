@@ -7,14 +7,16 @@ from typing import Any, Literal
 
 @dataclasses.dataclass(frozen=True)
 class Param:
+    """Framework-independent description of a CLI parameter (option or argument)."""
+
     count: bool = False
     """Whether the parameter increments an integer."""
     default: Any = None
     """The default value of the parameter."""
     envvar: str | None = None
-    """ the environment variable name for this parameter."""
+    """The environment variable name for this parameter."""
     flag_value: bool = False
-    """ Value used for this flag if enabled."""
+    """Value used for this flag if enabled."""
     help: str | None = None
     """A formatted help text for this parameter."""
     hidden: bool = False

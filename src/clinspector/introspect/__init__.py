@@ -12,18 +12,22 @@ if TYPE_CHECKING:
 def get_cmd_info(  # noqa: PLR0911
     instance: Any, command: str | None = None
 ) -> commandinfo.CommandInfo | None:
-    """Return a `CommmandInfo` object for command of given instance.
+    """Return a `CommandInfo` object for command of given instance.
 
     Instance can be
     - a `Typer` instance
-    - **click** `Group` instance
-    - An `ArgumentParser` instance
-    - A cappa dataclass
-    - A cleo Application instance
+    - a **click** `Group` instance
+    - an `ArgumentParser` instance
+    - a cappa dataclass (decorated with `@cappa.command`)
+    - a cleo `Application` instance
+    - a cyclopts `App` instance
 
     Args:
         instance: A supported CLI instance
         command: An optional specific subcommand to fetch info for.
+
+    Returns:
+        The command info, or None if the instance type is not supported.
     """
     if importlib.util.find_spec("typer"):
         from clinspector.introspect.introspect_typer import get_info as typer_info

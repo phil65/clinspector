@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 
 @dataclasses.dataclass
 class CommandInfo:
+    """Framework-independent description of a CLI command and its subcommands."""
+
     name: str
     """The name of the command."""
     description: str = ""
