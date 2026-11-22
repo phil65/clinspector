@@ -2,7 +2,7 @@
 
 [project]
 name = "clinspector"
-version = "1.0.5"
+version = "2.0.0"
 description = "Introspect Python CLI apps (Typer, Click, Cleo, Cappa, Cyclopts, argparse) into structured data."
 readme = "README.md"
 requires-python = ">=3.13"
