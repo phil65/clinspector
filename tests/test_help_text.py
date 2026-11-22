@@ -18,7 +18,7 @@ RESOURCES = pathlib.Path(__file__).parent / "resources"
 
 
 def _parse(name: str):
-    return parse_help_text((RESOURCES / f"{name}.txt").read_text())
+    return parse_help_text((RESOURCES / f"{name}.txt").read_text(encoding="utf-8"))
 
 
 @pytest.mark.parametrize(
