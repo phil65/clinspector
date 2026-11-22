@@ -14,6 +14,7 @@ from clinspector.models.commandinfo import CommandInfo
 from clinspector.models.param import Param
 
 
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07]*\x07")
 _USAGE_RE = re.compile(r"^\s*usage:\s*(.*)$", re.IGNORECASE)
 _SECTION_RE = re.compile(r"^(?P<title>[A-Za-z][\w ()/-]*):\s*$")
 # term and help are separated by at least two spaces (or the term is alone on its line)
@@ -164,9 +165,9 @@ def parse_help_text(text: str) -> CommandInfo:
     Subcommands are returned without params (their help pages are separate).
 
     Args:
-        text: The help text.
+        text: The help text (ANSI color codes are stripped).
     """
-    lines = text.expandtabs().splitlines()
+    lines = _ANSI_RE.sub("", text).expandtabs().splitlines()
     usage, usage_start, usage_end = _usage_block(lines)
     prog = _prog_name(usage, lines)
 

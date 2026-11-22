@@ -105,6 +105,16 @@ def test_real_argparse_help(example_argparser: argparse.ArgumentParser):
     assert params["enable_feature"].is_flag
 
 
+def test_ansi_codes_are_stripped():
+    text = (
+        "\x1b[1;34musage: \x1b[0m\x1b[1;35mprog\x1b[0m [-h]\n\n"
+        "options:\n  \x1b[32m-h\x1b[0m  Help.\n"
+    )
+    info = parse_help_text(text)
+    assert info.name == "prog"
+    assert info.params[0].opts == ["-h"]
+
+
 def test_real_click_help():
     click = pytest.importorskip("click")
     from click.testing import CliRunner
