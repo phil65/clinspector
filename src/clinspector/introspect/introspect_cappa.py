@@ -72,7 +72,7 @@ def get_info(cls: type[Any]) -> commandinfo.CommandInfo:
 if __name__ == "__main__":
     import typing
 
-    @cappa.command(invoke=print)
+    @cappa.command(invoke=print)  # ty: ignore[not-callable]
     class Test:
         """Test command that demonstrates cappa usage."""
 

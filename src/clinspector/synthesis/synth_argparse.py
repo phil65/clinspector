@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
@@ -18,7 +18,7 @@ def _add_param(parser: argparse.ArgumentParser, param: Param) -> None:
         parser: The parser to add the parameter to
         param: The parameter to add
     """
-    kwargs = {
+    kwargs: dict[str, Any] = {
         "help": param.help,
         "default": param.default,
     }

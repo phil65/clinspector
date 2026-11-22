@@ -71,7 +71,7 @@ def create_class(cmd_info: CommandInfo) -> type[Any]:
         print(f"Called {cmd_info.name} with: {kwargs}")
 
     # Create class with cappa's command decorator
-    @cappa.command(name=cmd_info.name, help=cmd_info.description, invoke=dummy_callback)
+    @cappa.command(name=cmd_info.name, help=cmd_info.description, invoke=dummy_callback)  # ty: ignore[not-callable]
     class DynamicCommand:
         """Dynamic command class."""
 
@@ -104,14 +104,16 @@ def create_class(cmd_info: CommandInfo) -> type[Any]:
                     ),
                 ]
             else:  # It's a positional argument
-                arg_type: type[str | list[str]]
-                arg_type = list[str] if param.multiple else str
                 arg = cappa.Arg(
                     help=param.help,
                     required=param.required,
                     default=param.default,
                 )
-                locals()[param.name] = typing.Annotated[arg_type, arg]
+                locals()[param.name] = (
+                    typing.Annotated[list[str], arg]
+                    if param.multiple
+                    else typing.Annotated[str, arg]
+                )
 
     return DynamicCommand
 

@@ -33,12 +33,12 @@ def _create_param(param_info: Param) -> click.Parameter:
         return click.Option(param_info.opts, **kwargs)
 
     # It's an argument
-    kwargs = {"required": param_info.required}
+    arg_kwargs: dict[str, Any] = {"required": param_info.required}
     if param_info.multiple:
-        kwargs["nargs"] = -1
+        arg_kwargs["nargs"] = -1
     if param_info.metavar:
-        kwargs["type"] = click.STRING
-    return click.Argument([param_info.name], **kwargs)
+        arg_kwargs["metavar"] = param_info.metavar
+    return click.Argument([param_info.name], **arg_kwargs)
 
 
 def _create_command(

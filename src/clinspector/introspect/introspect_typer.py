@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, cast
 
 import typer
 from typer.core import TyperArgument, TyperOption
@@ -28,7 +28,7 @@ def _parse_param(p: _click.Parameter) -> param.Param:
     opt = p if isinstance(p, TyperOption) else None
     return param.Param(
         name=p.name,
-        param_type_name=p.param_type_name,  # type: ignore[arg-type]
+        param_type_name=cast(Literal["option", "parameter", "argument"], p.param_type_name),
         opts=p.opts,
         secondary_opts=p.secondary_opts,
         type=(
