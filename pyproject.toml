@@ -50,12 +50,11 @@ Issues = "https://github.com/phil65/clinspector/issues"
 Source = "https://github.com/phil65/clinspector"
 
 [project.optional-dependencies]
-all = ["clinspector[cappa,cleo,click,cyclopts,help-parser,man-pages,markdown,tldr,typer]"]
+all = ["clinspector[cappa,cleo,click,cyclopts,man-pages,markdown,tldr,typer]"]
 cappa = ["cappa>=0.33.0"]
 cleo = ["cleo>=2.1.0"]
 click = ["click>=8.5.1"]
 cyclopts = ["cyclopts>=5.5.2"]
-help-parser = ["pydantic>=2.14.4", "schemez>=2.2.30"]
 man-pages = ["anyenv[httpx]>=2.0.18"]
 markdown = ["jinja2>=3.1.6"]
 tldr = ["tldr>=3.4.4"]

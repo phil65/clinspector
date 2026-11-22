@@ -15,6 +15,7 @@ from clinspector.synthesis import is_help_param
 if TYPE_CHECKING:
     from clinspector.models.commandinfo import CommandInfo
     from clinspector.models.param import Param
+    from clinspector.synthesis import Handler
 
 
 def _class_name(name: str) -> str:
@@ -73,13 +74,15 @@ def _has_default(field: dataclasses.Field[Any]) -> bool:
     )
 
 
-def create_class(cmd_info: CommandInfo) -> type[Any]:
+def create_class(cmd_info: CommandInfo, handler: Handler | None = None) -> type[Any]:
     """Create a Cappa command class (a dataclass) from a CommandInfo object.
 
     Subcommands become nested command classes, collected in a `subcommand` field.
 
     Args:
         cmd_info: The CommandInfo object to convert
+        handler: Called by `cappa.invoke` with the invoked command's info and its
+                 parsed values.
 
     Returns:
         A dataclass decorated with cappa.command
@@ -88,17 +91,25 @@ def create_class(cmd_info: CommandInfo) -> type[Any]:
     # dataclasses require fields without defaults to come first
     fields.sort(key=lambda f: _has_default(f[2]))
     if cmd_info.subcommands:
-        sub_classes = [create_class(sub) for sub in cmd_info.subcommands.values()]
+        sub_classes = [create_class(sub, handler) for sub in cmd_info.subcommands.values()]
         union = functools.reduce(operator.or_, sub_classes)
         hint = Annotated[union, cappa.Subcommand()]  # ty: ignore[invalid-type-form]
         fields.insert(0, ("subcommand", hint, dataclasses.field()))
 
-    def invoke(**kwargs: Any) -> None:
-        """Placeholder callback."""
-        print(f"Called {cmd_info.name} with: {kwargs}")
-
     cls = dataclasses.make_dataclass(_class_name(cmd_info.name), fields)
     cls.__doc__ = cmd_info.description or None
+    invoke = None
+    if handler is not None:
+
+        def invoke(command: Any) -> Any:
+            values = {
+                f.name: getattr(command, f.name)
+                for f in dataclasses.fields(command)
+                if f.name != "subcommand"
+            }
+            return handler(cmd_info, values)
+
+        invoke.__annotations__ = {"command": cls}  # cappa injects the parsed instance
     return cappa.command(  # ty: ignore[not-callable]
         cls,
         name=cmd_info.name,

@@ -43,3 +43,27 @@ def test_build_cli_command():
         *("tool", "build", "-v", "--dry-run"),
     ]
     assert build.build_cli_command() == ["tool", "build"]
+
+
+def test_to_dict_roundtrip():
+    import json
+
+    info = _info()
+    info.callback = print
+    data = info.to_dict()
+    assert "callback" not in data
+    json.dumps(data)  # serializable
+    restored = CommandInfo.from_dict(data)
+    assert restored == info  # callbacks and parent links are not compared
+    assert restored["build"].full_command == "tool build"
+    assert restored["build"].params[1].multiple
+
+
+def test_walk():
+    assert [c.full_command for c in _info().walk()] == ["tool", "tool build"]
+
+
+def test_param_from_dict_ignores_unknown_keys():
+    param = Param.from_dict({"name": "x", "opts": ["--x"], "unknown": 1})
+    assert param.name == "x"
+    assert param.is_option

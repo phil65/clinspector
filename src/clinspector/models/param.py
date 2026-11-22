@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Callable  # noqa: TC003
 import dataclasses
 from typing import Any, Literal
 
 
-@dataclasses.dataclass(frozen=True)
+ParamTypeName = Literal["option", "argument"]
+
+
+@dataclasses.dataclass
 class Param:
     """Framework-independent description of a CLI parameter (option or argument)."""
 
@@ -31,19 +33,17 @@ class Param:
     """The number of arguments this parameter matches. (Argparse may return * / ?)"""
     opts: list[str] = dataclasses.field(default_factory=list)
     """Options for this parameter."""
-    param_type_name: Literal["option", "parameter", "argument"] = "option"
-    """The type of the parameter."""
+    param_type_name: ParamTypeName = "option"
+    """Whether this parameter is an option or a positional argument."""
     prompt: Any = None
     """Whether user is prompted for this parameter."""
     required: bool = False
     """Whether the parameter is required."""
     secondary_opts: list[str] = dataclasses.field(default_factory=list)
-    """Secondary options for this parameter."""
-    type: dict[str, str] | None = None
-    """The type object of the parameter."""
-    callback: Callable[[Any], Any] | None = None
-    """A method to further process the value after type conversion."""
-    expose_value: str = ""
+    """Secondary options for this parameter (e.g. `--no-flag`)."""
+    type: str | None = None
+    """Name of the value type (`"str"`, `"int"`, `"float"`, `"bool"`, `"path"`, ...)."""
+    expose_value: bool = True
     """Whether value is passed onwards to the command callback and stored in context."""
     is_eager: bool = False
     """Whether the param is eager."""
@@ -56,3 +56,18 @@ class Param:
     def opt_str(self) -> str:
         """A formatted and sorted string containing the the options."""
         return ", ".join(f"`{i}`" for i in reversed(self.opts))
+
+    @property
+    def is_option(self) -> bool:
+        """Whether this parameter is an option (as opposed to a positional argument)."""
+        return self.param_type_name == "option"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a dict representation of this param."""
+        return dataclasses.asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Param:
+        """Create a Param from a dict (as returned by `to_dict`). Unknown keys are ignored."""
+        fields = {f.name for f in dataclasses.fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in fields})

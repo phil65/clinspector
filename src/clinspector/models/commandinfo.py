@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import dataclasses
-import shlex
 import subprocess
 from typing import TYPE_CHECKING, Any
 
+from clinspector.models.param import Param
+
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from clinspector.models import param
+    from collections.abc import Callable, Iterator
 
 
 @dataclasses.dataclass
@@ -30,11 +29,11 @@ class CommandInfo:
     """Epilog for this command."""
     hidden: bool = False
     """Whether this command is hidden."""
-    callback: Callable[..., Any] | None = None
-    """A callback for this command."""
-    params: list[param.Param] = dataclasses.field(default_factory=list)
+    callback: Callable[..., Any] | None = dataclasses.field(default=None, repr=False, compare=False)
+    """The framework callback for this command (not part of `to_dict` / comparisons)."""
+    params: list[Param] = dataclasses.field(default_factory=list)
     """A list of Params for this command."""
-    _parent: CommandInfo | None = dataclasses.field(default=None, repr=False)
+    _parent: CommandInfo | None = dataclasses.field(default=None, repr=False, compare=False)
     """Reference to parent command (internal use)."""
 
     def __post_init__(self) -> None:
@@ -47,6 +46,39 @@ class CommandInfo:
         subcmd = self.subcommands[name]
         subcmd._parent = self  # Ensure parent is set (subcommands may be added later)
         return subcmd
+
+    def walk(self) -> Iterator[CommandInfo]:
+        """Iterate over this command and all (nested) subcommands, depth-first."""
+        yield self
+        for name in self.subcommands:
+            yield from self[name].walk()
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a dict representation of this command tree (without callbacks)."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "usage": self.usage,
+            "deprecated": self.deprecated,
+            "epilog": self.epilog,
+            "hidden": self.hidden,
+            "params": [p.to_dict() for p in self.params],
+            "subcommands": {k: v.to_dict() for k, v in self.subcommands.items()},
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CommandInfo:
+        """Create a command tree from a dict (as returned by `to_dict`)."""
+        return cls(
+            name=data["name"],
+            description=data.get("description", ""),
+            usage=data.get("usage", ""),
+            deprecated=data.get("deprecated", False),
+            epilog=data.get("epilog"),
+            hidden=data.get("hidden", False),
+            params=[Param.from_dict(p) for p in data.get("params", [])],
+            subcommands={k: cls.from_dict(v) for k, v in data.get("subcommands", {}).items()},
+        )
 
     @property
     def full_path(self) -> list[str]:
@@ -148,36 +180,4 @@ class CommandInfo:
             capture_output=capture_output,
             check=check,
             env=env,
-        )
-
-    def execute_shell(
-        self,
-        args: dict[str, Any] | None = None,
-        capture_output: bool = False,
-        check: bool = True,
-        env: dict[str, str] | None = None,
-    ) -> subprocess.CompletedProcess[str]:
-        """Execute this command through the system shell (parts are shell-quoted).
-
-        Args:
-            args: Dictionary of parameter name to value mappings
-            capture_output: Whether to capture stdout/stderr
-            check: Whether to raise exception if command fails
-            env: Environment variables to set for the process
-
-        Returns:
-            Completed process with results
-
-        Raises:
-            subprocess.CalledProcessError: If check=True and process returns non-zero
-        """
-        cmd_parts = self.build_cli_command(args)
-        cmd_str = " ".join(shlex.quote(part) for part in cmd_parts)
-        return subprocess.run(
-            cmd_str,
-            text=True,
-            capture_output=capture_output,
-            check=check,
-            env=env,
-            shell=True,
         )

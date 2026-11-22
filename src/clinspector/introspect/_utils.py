@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+import types
+import typing
 from typing import TYPE_CHECKING, Any
 
 
@@ -44,4 +46,51 @@ def first_envvar(envvar: Any) -> str | None:
         return envvar or None
     if isinstance(envvar, Sequence) and envvar and isinstance(envvar[0], str):
         return envvar[0]
+    return None
+
+
+_CLICK_TYPE_NAMES = {
+    "text": "str",
+    "integer": "int",
+    "integer range": "int",
+    "float range": "float",
+    "boolean": "bool",
+    "filename": "file",
+}
+
+
+def type_name(obj: Any) -> str | None:
+    """Return a normalized type name for a Python type or a click `ParamType`.
+
+    Python types map to their name (`int` -> `"int"`), click types to the matching
+    Python-style name (`click.INT` -> `"int"`, `click.Path()` -> `"path"`).
+    """
+    if obj is None:
+        return None
+    if isinstance(obj, type):
+        return obj.__name__
+    if isinstance(name := getattr(obj, "name", None), str):  # click ParamType
+        return _CLICK_TYPE_NAMES.get(name, name)
+    name = getattr(obj, "__name__", None)  # callables like argparse `type=` functions
+    return None if name in (None, "<lambda>") else name
+
+
+def annotation_type_name(annotation: Any) -> str | None:
+    """Return a type name for a Python type annotation.
+
+    `Annotated`, optional (`X | None`) and container (`list[X]`, `tuple[X, ...]`)
+    annotations are unwrapped to the item type, `Literal` maps to `"choice"`.
+    """
+    origin = typing.get_origin(annotation)
+    args = [a for a in typing.get_args(annotation) if a is not type(None) and a is not Ellipsis]
+    if origin is typing.Annotated:
+        return annotation_type_name(args[0])
+    if origin is typing.Literal:
+        return "choice"
+    if origin in (typing.Union, types.UnionType) and len(args) == 1:
+        return annotation_type_name(args[0])
+    if origin in (list, tuple, set, frozenset, Sequence) and args:
+        return annotation_type_name(args[0])
+    if isinstance(annotation, type):
+        return annotation.__name__
     return None

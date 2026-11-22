@@ -3,100 +3,69 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Literal
+import types
+import typing
+from typing import TYPE_CHECKING, Any
 
 from cyclopts.command_spec import CommandSpec
 
-from clinspector.introspect._utils import first_envvar, resolve_command
+from clinspector.introspect._utils import annotation_type_name, first_envvar, resolve_command
 from clinspector.models import commandinfo, param
 
 
 if TYPE_CHECKING:
     from cyclopts import App
+    from cyclopts.argument import Argument
 
 
-ParamType = Literal["option", "parameter", "argument"]
+def _parse_argument(argument: Argument) -> param.Param:
+    """Convert a cyclopts `Argument` into a `Param`."""
+    field_info = argument.field_info
+    positional = argument.is_positional_only() or argument.is_var_positional()
+    names = list(argument.names)
+    negatives = list(argument.negatives)
+    opts = [] if positional else [n for n in names if n not in negatives]
+    default = field_info.default
+    choices = argument.get_choices()
+    hint = argument.hint
+    multiple = argument.is_var_positional() or typing.get_origin(_strip_optional(hint)) in (
+        list,
+        set,
+        tuple,
+        frozenset,
+    )
+    return param.Param(
+        name=field_info.name,
+        help=argument.parameter.help or None,
+        default=None if default is inspect.Parameter.empty else default,
+        required=bool(argument.required),
+        opts=opts,
+        secondary_opts=negatives if not positional else [],
+        is_flag=argument.is_flag(),
+        param_type_name="argument" if positional else "option",
+        multiple=multiple,
+        nargs=-1 if multiple and positional else 1,
+        hidden=not argument.show,
+        metavar=names[0] if positional and names else None,
+        envvar=first_envvar(argument.parameter.env_var),
+        choices=[str(c) for c in choices] if choices else None,
+        type=annotation_type_name(hint),
+    )
+
+
+def _strip_optional(hint: Any) -> Any:
+    args = [a for a in typing.get_args(hint) if a is not type(None)]
+    if typing.get_origin(hint) in (typing.Union, types.UnionType) and len(args) == 1:
+        return args[0]
+    return hint
 
 
 def _extract_params_from_app(app: App) -> list[param.Param]:
-    """Extract parameters from a cyclopts App's default command.
-
-    Args:
-        app: Cyclopts App instance
-
-    Returns:
-        List of Param objects
-    """
+    """Extract parameters from a cyclopts App's default command."""
     if not app.default_command:
         return []
-
-    try:
-        # Get the argument collection which contains parameter info
-        argument_collection = app.assemble_argument_collection(parse_docstring=True)
-        params = []
-
-        for argument in argument_collection:
-            field_info = argument.field_info
-            parameter = argument.parameter
-
-            # Extract option strings
-            opts: list[str] = []
-            # Handle negative boolean flags
-            if parameter.negative_bool:
-                opts.extend(f"--{name}" for name in parameter.negative_bool)
-
-            # Check if it's a positional argument or option
-            option_name = getattr(parameter, "option_name", None)
-            is_positional = not opts and not option_name
-
-            # Build option names if not positional
-            if not is_positional:
-                if name := option_name:
-                    label = f"-{name}" if len(name) == 1 else f"--{name}"
-                else:
-                    # Derive from field name
-                    label = "--" + field_info.name.replace("_", "-")
-                opts.append(label)
-
-            # Determine parameter type
-            param_type_name: ParamType = "argument" if is_positional else "option"
-            # Simple check for boolean type
-            p = param.Param(
-                name=field_info.name,
-                help=parameter.help or getattr(field_info, "description", None),
-                default=field_info.default,
-                required=parameter.required or False,
-                opts=opts,
-                is_flag="bool" in str(field_info.annotation).lower(),
-                param_type_name=param_type_name,
-                multiple=getattr(parameter, "multiple", False),
-                hidden=not parameter.show,
-                metavar=getattr(parameter, "metavar", None),
-                envvar=first_envvar(parameter.env_var),
-            )
-            params.append(p)
-
-    except (AttributeError, TypeError, ValueError):
-        # Fallback: try to inspect the function signature directly
-        try:
-            sig = inspect.signature(app.default_command)
-            params = []
-            for param_name, param_obj in sig.parameters.items():
-                default_val = (
-                    param_obj.default if param_obj.default != inspect.Parameter.empty else None
-                )
-                required = param_obj.default == inspect.Parameter.empty
-                p = param.Param(
-                    name=param_name,
-                    default=default_val,
-                    required=required,
-                    param_type_name="argument",
-                )
-                params.append(p)
-        except (AttributeError, TypeError, ValueError):
-            params = []
-
-    return params
+    collection = app.assemble_argument_collection(parse_docstring=True)
+    return [_parse_argument(argument) for argument in collection if not argument.children]
 
 
 def _parse_app(app: App, parent_name: str = "") -> commandinfo.CommandInfo:

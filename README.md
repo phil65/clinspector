@@ -99,15 +99,18 @@ If no such subcommand exists, the root command is returned. `get_cmd_info` retur
 - `name`, `description`, `usage`, `epilog`
 - `params: list[Param]`
 - `subcommands: dict[str, CommandInfo]` (also reachable via `info["name"]`)
-- `deprecated`, `hidden`, `callback`
+- `deprecated`, `hidden`, `callback` (the framework callback, not serialized or compared)
 - `full_path` / `full_command`: the command path including parents
-- `build_cli_command()`, `execute_cli()`, `execute_shell()`: run the command as a subprocess
+- `walk()`: iterate over the command and all nested subcommands
+- `to_dict()` / `CommandInfo.from_dict()`: plain-dict (JSON) round trip
+- `build_cli_command()`, `execute_cli()`: run the command as a subprocess
 
 `Param` (`clinspector.Param`), among others:
 
 - `name`, `help`, `default`, `opts` (e.g. `["-f", "--flag"]`), `secondary_opts`
 - `required`, `is_flag`, `multiple`, `nargs`, `choices`, `metavar`
-- `envvar`, `hidden`, `type`, `param_type_name` (`"option"`, `"argument"`, ...)
+- `envvar`, `hidden`, `param_type_name` (`"option"` or `"argument"`)
+- `type`: normalized type name (`"str"`, `"int"`, `"bool"`, `"path"`, `"choice"`, ...)
 
 ## More features
 
@@ -116,9 +119,11 @@ If no such subcommand exists, the root command is returned. `get_cmd_info` retur
 - **Synthesis**: create a CLI from a `CommandInfo`, e.g.
   `clinspector.synthesis.synth_click.create_group`, `synth_typer.create_app`,
   `synth_cleo.create_app`, `synth_argparse.create_parser`, `synth_cappa.create_class`.
-  Generated commands use placeholder callbacks (typer: pass `callback=` to receive values).
+  Pass `handler=` (`handler(command_info, values)`) to run code when a command is invoked
+  (all except argparse, which only parses).
 - **Help providers**: async lookups of command examples from tldr pages
   (`clinspector.help_providers.tldr_pages.TldrProvider`, `tldr` extra) and man pages
   (`clinspector.help_providers.man_pages.ManPageProvider`, `man-pages` extra).
-- **Help text parser** (experimental): `clinspector.introspect.cliparser.CLIHelpParser`
-  parses raw `--help` output (`help-parser` extra).
+- **Help text parser**: `clinspector.parse_help_text(text)` turns raw `--help` output
+  (argparse, click/typer, rich-click, docopt, cement, cliff, plac, fire layouts) into a
+  `CommandInfo`. Heuristic: prefer `get_cmd_info` when you have the CLI object.

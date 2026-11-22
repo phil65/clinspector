@@ -49,17 +49,19 @@ def test_params(app: typer.Typer) -> None:
 
     assert params["name"].param_type_name == "argument"
     assert params["name"].required
-    assert params["name"].type == {"name": "str"}
+    assert params["name"].type == "str"
 
     assert params["count"].param_type_name == "option"
     assert params["count"].default == 1
-    assert params["count"].type == {"name": "int"}
+    assert params["count"].type == "int"
 
     assert params["loud"].is_flag
     assert params["loud"].help == "Shout."
     assert set(params["loud"].opts) == {"--loud", "-l"}
 
     assert params["mode"].choices == ["a", "b"]
+    assert params["mode"].type == "choice"
+    assert params["loud"].type == "bool"
 
 
 def test_command_flags(app: typer.Typer) -> None:

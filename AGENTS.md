@@ -11,12 +11,15 @@ Its main consumer is mknodes (CLI documentation nodes), so treat the public API
 
 ## Architecture
 
-- `src/clinspector/__init__.py`: public API: `get_cmd_info`, `CommandInfo`, `Param`, `__version__`.
+- `src/clinspector/__init__.py`: public API: `get_cmd_info`, `parse_help_text`, `CommandInfo`, `Param`,
+  `__version__`.
 - `src/clinspector/models/`: the core data model.
   - `commandinfo.py`: `CommandInfo` dataclass (name, description, usage, params,
     `subcommands` dict, callback, parent link). `info["sub"]` returns a subcommand;
-    `full_path`, `build_cli_command`, `execute_cli`, `execute_shell`.
-  - `param.py`: frozen `Param` dataclass (opts, nargs, is_flag, multiple, type, ...).
+    `full_path`, `walk`, `to_dict`/`from_dict`, `build_cli_command`, `execute_cli`.
+    `callback` and the parent link are excluded from `to_dict` and `==`.
+  - `param.py`: `Param` dataclass (opts, nargs, is_flag, multiple, ...). `type` is a
+    normalized type name (`introspect/_utils.type_name` / `annotation_type_name`).
 - `src/clinspector/introspect/`: framework → model.
   - `__init__.py`: `get_cmd_info(instance, command=None)` dispatches on the instance type.
     Each framework is checked with `importlib.util.find_spec` and imported lazily, so
@@ -26,13 +29,13 @@ Its main consumer is mknodes (CLI documentation nodes), so treat the public API
     through `introspect/_utils.resolve_command` (dot paths, falls back to the root: mknodes
     passes the program name as `command`).
   - `markdown.py`: `get_cmd_markdown()` renders a command via Jinja2 (`markdown` extra).
-  - `cliparser.py`: experimental parser of raw `--help` text into schemez/pydantic models
-    (`help-parser` extra).
-    Not imported by the package `__init__`.
+  - `help_text.py`: `parse_help_text()`, a heuristic parser of raw `--help` output into
+    `CommandInfo` (stdlib only); fixtures in `tests/resources/`.
 - `src/clinspector/synthesis/`: model → framework (`synth_click.create_group`,
   `synth_typer.create_app`, `synth_cleo.create_app`, `synth_argparse.create_parser`,
   `synth_cappa.create_class`). Not exported from the package root. Help options are
-  skipped (`synthesis.is_help_param`) since every framework adds its own.
+  skipped (`synthesis.is_help_param`) since every framework adds its own. All generators
+  except argparse take an optional `handler(command_info, values)` (`synthesis.Handler`).
 - `src/clinspector/help_providers/`: external help sources. `base.py` defines the
   `HelpProvider` protocol and `CommandHelp`/`Example`; `tldr_pages.py` (`tldr` extra)
   and `man_pages.py` (fetches via `anyenv`, `man-pages` extra) implement it. All async.
@@ -88,8 +91,8 @@ PyPI release job in `.github/workflows/build.yml`.
   come from the template. Update with `copier update` rather than hand-editing;
   add dependencies below the `# Only add below (Copier)` markers.
 - The package has no required dependencies. Frameworks and features live in extras
-  (`typer`, `click`, `cleo`, `cappa`, `cyclopts`, `markdown`, `tldr`, `man-pages`,
-  `help-parser`); `all` pulls in every extra.
+  (`typer`, `click`, `cleo`, `cappa`, `cyclopts`, `markdown`, `tldr`, `man-pages`);
+  `all` pulls in every extra.
 - CI tests Python 3.13-3.15 on Linux/macOS/Windows; 3.15 is allowed to fail.
 - The docs site is the mkdocs-mknodes default site: README.md is the index page, the
   rest (API, CLI, dev pages) is generated. `docs/` is empty on purpose.

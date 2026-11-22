@@ -60,7 +60,7 @@ def parse(app: Application) -> commandinfo.CommandInfo:
     default_cmd = commands.get(default_cmd_name)
     return commandinfo.CommandInfo(
         name=app.name or "",
-        description=app.long_version or "",
+        description="",
         usage=f"{app.name} [options] [--] <command> [<arguments>]",
         subcommands=sub_cmds,
         params=_parse_command(default_cmd).params if default_cmd else [],

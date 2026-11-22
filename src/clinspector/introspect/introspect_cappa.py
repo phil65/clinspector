@@ -9,7 +9,7 @@ from cappa.arg import ArgAction
 from cappa.default import Env
 from cappa.type_view import Empty
 
-from clinspector.introspect._utils import resolve_command
+from clinspector.introspect._utils import annotation_type_name, resolve_command
 from clinspector.models import commandinfo, param
 
 
@@ -67,6 +67,7 @@ def _get_param_from_arg(arg: Arg[Any]) -> param.Param:
         multiple=action in _MULTIPLE_ACTIONS or num_args == -1,
         nargs=num_args,
         choices=[str(c) for c in arg.choices] if arg.choices else None,
+        type=annotation_type_name(getattr(arg.type_view, "annotation", None)),
         metavar=metavar if metavar != field_name else None,
         hidden=bool(arg.hidden),
         param_type_name="option" if opts else "argument",

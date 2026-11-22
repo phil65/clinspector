@@ -125,11 +125,13 @@ def test_app_with_complex_parameters():
     assert info.name == "complex"
     assert info.callback == main
 
-    # Basic check that parameters were extracted
-    param_names = {p.name for p in info.params}
-    expected_params = {"required_arg", "optional_str", "flag", "number"}
-    # Check that at least some expected parameters are present
-    assert len(param_names & expected_params) > 0
+    params = {p.name: p for p in info.params}
+    assert {"required_arg", "optional_str", "flag", "number"} <= set(params)
+    assert params["required_arg"].required
+    assert params["number"].type == "int"
+    assert params["number"].default == 42  # noqa: PLR2004
+    assert params["flag"].is_flag
+    assert params["flag"].type == "bool"
 
 
 def test_cyclopts_detection():

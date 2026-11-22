@@ -44,6 +44,8 @@ def test_params():
     assert info
     params = {p.name: p for p in info.params}
     assert params["mode"].choices == ["x", "y"]
+    assert params["mode"].type == "choice"
+    assert params["files"].type == "str"
     assert params["mode"].default == "x"
     assert params["mode"].envvar == "MODE"
     assert params["shout"].secondary_opts == ["--no-shout"]

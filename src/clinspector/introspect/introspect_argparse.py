@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from typing import Any
 
-from clinspector.introspect._utils import resolve_command
+from clinspector.introspect._utils import resolve_command, type_name
 from clinspector.models import commandinfo, param
 
 
@@ -28,7 +28,6 @@ def _parse_action(action: argparse.Action) -> param.Param:
         secondary_opts = [o for o in opts if o.startswith("--no-")]
         opts = [o for o in opts if o not in secondary_opts]
     hidden = action.help == argparse.SUPPRESS
-    type_name = getattr(action.type, "__name__", None)
     return param.Param(
         name=action.dest,
         param_type_name="option" if action.option_strings else "argument",
@@ -44,7 +43,7 @@ def _parse_action(action: argparse.Action) -> param.Param:
         count=isinstance(action, argparse._CountAction),
         multiple=isinstance(action, _MULTIPLE_ACTIONS),
         choices=[str(c) for c in action.choices] if action.choices is not None else None,
-        type={"name": type_name} if type_name and type_name != "<lambda>" else None,
+        type=type_name(action.type),
     )
 
 

@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
+    from clinspector.models.commandinfo import CommandInfo
     from clinspector.models.param import Param
+
+
+type Handler = Callable[[CommandInfo, dict[str, Any]], Any]
+"""Called with the invoked command and its parsed parameter values."""
 
 
 _HELP_OPTS = {"-h", "--help"}

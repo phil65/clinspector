@@ -8,6 +8,10 @@ from clinspector.synthesis import is_help_param
 
 
 if TYPE_CHECKING:
+    from clinspector.synthesis import Handler
+
+
+if TYPE_CHECKING:
     from collections.abc import Callable
 
     import click
@@ -60,10 +64,17 @@ def _create_params(cmd_info: CommandInfo) -> list[click.Parameter]:
     return [_create_param(p) for p in cmd_info.params if not is_help_param(p)]
 
 
-def _create_command(
-    cmd_info: CommandInfo,
-    callback: Callable[..., Any] | None = None,
-) -> click.Command:
+def _callback(cmd_info: CommandInfo, handler: Handler | None) -> Callable[..., Any] | None:
+    if handler is None:
+        return None
+
+    def callback(**kwargs: Any) -> Any:
+        return handler(cmd_info, kwargs)
+
+    return callback
+
+
+def _create_command(cmd_info: CommandInfo, handler: Handler | None = None) -> click.Command:
     """Create a Click Command from a CommandInfo object."""
     import click
 
@@ -71,19 +82,20 @@ def _create_command(
         name=cmd_info.name,
         help=cmd_info.description,
         params=_create_params(cmd_info),
-        callback=callback,
+        callback=_callback(cmd_info, handler),
         hidden=cmd_info.hidden,
         epilog=cmd_info.epilog,
         deprecated=cmd_info.deprecated,
     )
 
 
-def create_group(cmd_info: CommandInfo, callback: Callable[..., Any] | None = None) -> click.Group:
+def create_group(cmd_info: CommandInfo, handler: Handler | None = None) -> click.Group:
     """Create a Click Group from a CommandInfo object.
 
     Args:
         cmd_info: The CommandInfo object to convert
-        callback: Optional callback function for the group
+        handler: Called with the invoked (sub)command's info and its parsed values.
+                 Groups are invoked before their subcommands, as usual for click.
 
     Returns:
         A Click Group object with all commands and subcommands
@@ -94,7 +106,7 @@ def create_group(cmd_info: CommandInfo, callback: Callable[..., Any] | None = No
         name=cmd_info.name,
         help=cmd_info.description,
         params=_create_params(cmd_info),
-        callback=callback,
+        callback=_callback(cmd_info, handler),
         hidden=cmd_info.hidden,
         epilog=cmd_info.epilog,
         deprecated=cmd_info.deprecated,
@@ -102,6 +114,10 @@ def create_group(cmd_info: CommandInfo, callback: Callable[..., Any] | None = No
 
     # Add all subcommands recursively
     for name, subcmd in cmd_info.subcommands.items():
-        cmd = create_group(subcmd) if subcmd.subcommands else _create_command(subcmd)
+        cmd = (
+            create_group(subcmd, handler)
+            if subcmd.subcommands
+            else _create_command(subcmd, handler)
+        )
         group.add_command(cmd, name=name)
     return group

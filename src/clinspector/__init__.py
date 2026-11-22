@@ -18,7 +18,8 @@ __url__ = "https://github.com/phil65/clinspector"
 
 
 from clinspector.introspect import get_cmd_info
+from clinspector.introspect.help_text import parse_help_text
 from clinspector.models.commandinfo import CommandInfo
 from clinspector.models.param import Param
 
-__all__ = ["CommandInfo", "Param", "__version__", "get_cmd_info"]
+__all__ = ["CommandInfo", "Param", "__version__", "get_cmd_info", "parse_help_text"]

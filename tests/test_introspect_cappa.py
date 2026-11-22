@@ -51,6 +51,8 @@ def test_params():
     assert params["name"].help == "A name"
     assert params["count"].opts == ["-c", "--count"]
     assert params["count"].default == 1
+    assert params["count"].type == "int"
+    assert params["name"].type == "str"
     assert params["loud"].is_flag
     assert params["loud"].opts == ["-l", "--loud"]
 
@@ -62,5 +64,6 @@ def test_subcommand_params():
     params = {p.name: p for p in info.params}
     assert params["tags"].multiple
     assert params["tags"].choices == ["a", "b"]
+    assert params["tags"].type == "str"
     assert params["token"].envvar == "TOKEN"
     assert params["verbose"].count

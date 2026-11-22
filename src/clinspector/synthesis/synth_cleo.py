@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
     from clinspector.models.commandinfo import CommandInfo
     from clinspector.models.param import Param
+    from clinspector.synthesis import Handler
 
 
 _APP_OPTIONS = {"help", "quiet", "verbose", "version", "ansi", "no-ansi", "no-interaction"}
@@ -58,7 +59,11 @@ def _param_to_config(param: Param) -> tuple[Argument | Option, dict[str, str]]:
     )
 
 
-def _create_command_class(cmd_info: CommandInfo, name: str | None = None) -> type[Command]:
+def _create_command_class(
+    cmd_info: CommandInfo,
+    name: str | None = None,
+    handler: Handler | None = None,
+) -> type[Command]:
     """Create a Cleo Command class from a CommandInfo object."""
     args: list[Argument] = []
     opts: list[Option] = []
@@ -88,9 +93,8 @@ def _create_command_class(cmd_info: CommandInfo, name: str | None = None) -> typ
                 else:
                     values[param_name] = self.option(getter["option"])
 
-            # This is where you'd handle the actual command execution
-            self.line(f"Command {self.name} called with values: {values}")
-            return 0
+            result = handler(cmd_info, values) if handler else None
+            return result if isinstance(result, int) else 0
 
     DynamicCommand.name = name or cmd_info.name
     DynamicCommand.description = cmd_info.description or ""
@@ -98,13 +102,15 @@ def _create_command_class(cmd_info: CommandInfo, name: str | None = None) -> typ
     return DynamicCommand
 
 
-def create_app(cmd_info: CommandInfo) -> Application:
+def create_app(cmd_info: CommandInfo, handler: Handler | None = None) -> Application:
     """Create a Cleo Application from a CommandInfo object.
 
     Nested subcommands are registered with space-separated names (`"group sub"`).
 
     Args:
         cmd_info: The CommandInfo object to convert
+        handler: Called with the invoked command's info and its parsed values.
+                 An integer return value is used as exit code.
 
     Returns:
         A Cleo Application with all commands and subcommands
@@ -113,13 +119,13 @@ def create_app(cmd_info: CommandInfo) -> Application:
 
     # Create default command if main command has parameters
     if any(p.name not in _APP_OPTIONS for p in cmd_info.params):
-        app.add(_create_command_class(cmd_info)())
+        app.add(_create_command_class(cmd_info, handler=handler)())
 
     # Add all subcommands recursively
     def add_commands(commands: dict[str, CommandInfo], prefix: str = "") -> None:
         for name, subcmd in commands.items():
             full_name = f"{prefix}{name}"
-            app.add(_create_command_class(subcmd, name=full_name)())
+            app.add(_create_command_class(subcmd, name=full_name, handler=handler)())
             if subcmd.subcommands:
                 add_commands(subcmd.subcommands, prefix=f"{full_name} ")
 

@@ -40,11 +40,30 @@ def _check_roundtrip(app: Any, *, choices: bool = True) -> None:
     assert params["dry_run"].is_flag
 
 
+def _recorder() -> tuple[list[tuple[str, dict[str, Any]]], Any]:
+    calls: list[tuple[str, dict[str, Any]]] = []
+
+    def handler(info: CommandInfo, values: dict[str, Any]) -> None:
+        calls.append((info.name, values))
+
+    return calls, handler
+
+
+BUILD_VALUES = {"target": "x", "mode": "fast", "tag": ["a"], "dry_run": True}
+
+
 def test_click():
     pytest.importorskip("click")
+    from click.testing import CliRunner
+
     from clinspector.synthesis.synth_click import create_group
 
     _check_roundtrip(create_group(_info()))
+    calls, handler = _recorder()
+    group = create_group(_info(), handler=handler)
+    result = CliRunner().invoke(group, ["-vv", "build", "x", "--tag", "a", "--dry-run"])
+    assert result.exit_code == 0, result.output
+    assert calls == [("tool", {"verbose": 2}), ("build", {**BUILD_VALUES, "tag": ("a",)})]
 
 
 def test_typer():
@@ -53,13 +72,12 @@ def test_typer():
 
     from clinspector.synthesis.synth_typer import create_app
 
-    received: dict[str, Any] = {}
-    app = create_app(_info(), callback=lambda **kw: received.update(kw))
+    calls, handler = _recorder()
+    app = create_app(_info(), handler=handler)
     _check_roundtrip(app)
     result = CliRunner().invoke(app, ["-vv", "build", "x", "--tag", "a", "--dry-run"])
     assert result.exit_code == 0, result.output
-    assert received == {"verbose": 2}
-    assert "'tag': ['a']" in result.output
+    assert calls == [("tool", {"verbose": 2}), ("build", BUILD_VALUES)]
 
 
 def test_argparse():
@@ -76,9 +94,16 @@ def test_argparse():
 
 def test_cleo():
     pytest.importorskip("cleo")
+    from cleo.testers.application_tester import ApplicationTester
+
     from clinspector.synthesis.synth_cleo import create_app
 
     _check_roundtrip(create_app(_info()), choices=False)  # cleo has no choices
+    calls, handler = _recorder()
+    app = create_app(_info(), handler=handler)
+    app.auto_exits(False)
+    assert ApplicationTester(app).execute("build x --tag a --dry-run") == 0
+    assert calls == [("build", BUILD_VALUES)]
 
 
 def test_cappa():
@@ -92,3 +117,8 @@ def test_cappa():
     assert parsed.subcommand.target == "x"
     assert parsed.subcommand.mode == "slow"
     assert parsed.subcommand.tag == ["a"]
+
+    calls, handler = _recorder()
+    cls = create_class(_info(), handler=handler)
+    cappa.invoke(cls, argv=["build", "x", "-t", "a", "--dry-run"])
+    assert calls == [("build", BUILD_VALUES)]

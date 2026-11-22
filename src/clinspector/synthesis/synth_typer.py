@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
     from clinspector.models.commandinfo import CommandInfo
     from clinspector.models.param import Param
+    from clinspector.synthesis import Handler
 
 
 def _annotation(param: Param) -> Any:
@@ -50,17 +51,8 @@ def _typer_param(param: Param) -> Any:
     return typer.Argument(default, help=param.help, hidden=param.hidden, metavar=param.metavar)
 
 
-def _create_callback(
-    cmd_info: CommandInfo,
-    callback: Callable[..., Any] | None = None,
-) -> Callable[..., Any]:
-    """Create a callback function with a signature matching the command's params.
-
-    Args:
-        cmd_info: The command to create a callback for
-        callback: Function receiving the parsed values as keyword arguments.
-                  If not given, a placeholder echoing the values is used.
-    """
+def _create_callback(cmd_info: CommandInfo, handler: Handler | None) -> Callable[..., Any]:
+    """Create a callback function with a signature matching the command's params."""
     params = [
         inspect.Parameter(
             name=p.name,
@@ -72,27 +64,22 @@ def _create_callback(
         if not is_help_param(p)
     ]
 
-    def wrapper(**kwargs: Any) -> Any:
-        if callback is not None:
-            return callback(**kwargs)
-        typer.echo(f"Called {cmd_info.name} with {kwargs}")
-        return None
+    def callback(**kwargs: Any) -> Any:
+        return handler(cmd_info, kwargs) if handler else None
 
-    wrapper.__signature__ = inspect.Signature(params)  # ty: ignore[missing-attribute]
-    wrapper.__name__ = cmd_info.name.replace("-", "_") or "main"
-    wrapper.__doc__ = cmd_info.description
-    return wrapper
+    callback.__signature__ = inspect.Signature(params)  # ty: ignore[missing-attribute]
+    callback.__name__ = cmd_info.name.replace("-", "_") or "main"
+    callback.__doc__ = cmd_info.description
+    return callback
 
 
-def create_app(
-    cmd_info: CommandInfo,
-    callback: Callable[..., Any] | None = None,
-) -> typer.Typer:
+def create_app(cmd_info: CommandInfo, handler: Handler | None = None) -> typer.Typer:
     """Create a Typer app from a CommandInfo object.
 
     Args:
         cmd_info: The CommandInfo object to convert
-        callback: Optional callback function for the main command
+        handler: Called with the invoked (sub)command's info and its parsed values.
+                 The root command is invoked before subcommands, as usual for typer.
 
     Returns:
         A Typer application with all commands and subcommands
@@ -103,14 +90,13 @@ def create_app(
         no_args_is_help=True,
     )
 
-    if callback or any(not is_help_param(p) for p in cmd_info.params):
-        # If the main command has parameters, create a callback for it
-        app.callback()(_create_callback(cmd_info, callback))
+    if handler or any(not is_help_param(p) for p in cmd_info.params):
+        app.callback()(_create_callback(cmd_info, handler))
 
     # Add all subcommands recursively
     for name, subcmd in cmd_info.subcommands.items():
         if subcmd.subcommands:
-            app.add_typer(create_app(subcmd), name=name, hidden=subcmd.hidden)
+            app.add_typer(create_app(subcmd, handler), name=name, hidden=subcmd.hidden)
         else:
             app.command(
                 name=name,
@@ -118,6 +104,6 @@ def create_app(
                 hidden=subcmd.hidden,
                 deprecated=subcmd.deprecated,
                 epilog=subcmd.epilog,
-            )(_create_callback(subcmd))
+            )(_create_callback(subcmd, handler))
 
     return app

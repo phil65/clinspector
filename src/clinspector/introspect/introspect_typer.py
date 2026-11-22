@@ -1,11 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING
 
 from typer.core import TyperArgument, TyperOption
 from typer.main import get_command
 
-from clinspector.introspect._utils import first_envvar, resolve_command
+from clinspector.introspect._utils import (
+    annotation_type_name,
+    first_envvar,
+    resolve_command,
+    type_name,
+)
 from clinspector.models import commandinfo, param
 
 
@@ -29,14 +34,10 @@ def _parse_param(p: _click.Parameter) -> param.Param:
     opt = p if isinstance(p, TyperOption) else None
     return param.Param(
         name=p.name,
-        param_type_name=cast(Literal["option", "parameter", "argument"], p.param_type_name),
+        param_type_name="argument" if p.param_type_name == "argument" else "option",
         opts=p.opts,
         secondary_opts=p.secondary_opts,
-        type=(
-            {"name": getattr(annotation, "__name__", str(annotation))}
-            if annotation
-            else ({"name": click_type.name} if click_type else None)
-        ),
+        type=annotation_type_name(annotation) or type_name(click_type),
         required=p.required,
         nargs=p.nargs,
         multiple=p.multiple,
@@ -45,6 +46,7 @@ def _parse_param(p: _click.Parameter) -> param.Param:
         help=getattr(p, "help", None),
         hidden=getattr(p, "hidden", False),
         is_eager=p.is_eager,
+        expose_value=p.expose_value,
         metavar=p.metavar,
         choices=[str(c) for c in choices] if choices is not None else None,
         prompt=opt.prompt if opt else None,

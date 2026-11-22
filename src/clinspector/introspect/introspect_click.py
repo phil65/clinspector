@@ -5,7 +5,7 @@ from typing import Any
 
 import click
 
-from clinspector.introspect._utils import first_envvar, resolve_command
+from clinspector.introspect._utils import first_envvar, resolve_command, type_name
 from clinspector.models import commandinfo, param
 
 
@@ -20,6 +20,8 @@ def _parse_param(p: click.Parameter) -> param.Param:
     dct["choices"] = [str(c) for c in choices] if choices is not None else None
     dct["metavar"] = p.metavar
     dct["is_eager"] = p.is_eager
+    dct["expose_value"] = p.expose_value
+    dct["type"] = type_name(p.type)
     dct.setdefault("hidden", getattr(p, "hidden", False))
     return param.Param(**dct)
 

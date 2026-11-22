@@ -22,7 +22,7 @@ def test_argparse_param_names(example_argparser: argparse.ArgumentParser):
     assert params["number"].param_type_name == "option"
     assert params["number"].opts == ["-n", "--number"]
     assert params["number"].default == 42  # noqa: PLR2004
-    assert params["number"].type == {"name": "int"}
+    assert params["number"].type == "int"
     assert params["enable_feature"].is_flag
     assert params["mode"].choices == ["fast", "slow", "auto"]
     assert params["verbose"].count
