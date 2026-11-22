@@ -40,8 +40,9 @@ Framework support is optional; install the extras for the frameworks you use:
 
 ```bash
 pip install "clinspector[click]"      # or: typer, cleo, cappa, cyclopts
-pip install "clinspector[all]"        # click, typer, cappa and cleo
+pip install "clinspector[all]"        # all frameworks and optional features
 pip install "clinspector[markdown]"   # Markdown rendering (jinja2)
+pip install "clinspector[tldr]"       # tldr page help provider (also: man-pages)
 ```
 
 ## Quickstart
@@ -80,14 +81,16 @@ print([p.name for p in build_info.params])  # ['target', 'release', ...]
 `get_cmd_info(instance, command=None)` accepts:
 
 - [Typer](https://typer.tiangolo.com/): `typer.Typer` instances
-- [Click](https://click.palletsprojects.com/): `click.Group` instances
+- [Click](https://click.palletsprojects.com/): `click.Command` / `click.Group` instances
 - [Cleo](https://cleo.readthedocs.io/): `cleo.application.Application` instances
 - [Cappa](https://github.com/DanCardin/cappa): classes decorated with `@cappa.command`
 - [Cyclopts](https://github.com/BrianPugh/cyclopts): `cyclopts.App` instances
 - [argparse](https://docs.python.org/3/library/argparse.html): `ArgumentParser` instances
 
-Pass `command` to get a specific subcommand directly (argparse also accepts dot
-notation like `"group.sub"`). It returns `None` for unsupported objects.
+Pass `command` to get a specific subcommand directly. Nested subcommands use dot
+notation (`"group.sub"`); a leading root command name is ignored (`"cli.group.sub"`).
+If no such subcommand exists, the root command is returned. `get_cmd_info` returns
+`None` for unsupported objects.
 
 ## Data model
 
@@ -112,7 +115,10 @@ notation like `"group.sub"`). It returns `None` for unsupported objects.
   renders a command as Markdown (`markdown` extra).
 - **Synthesis**: create a CLI from a `CommandInfo`, e.g.
   `clinspector.synthesis.synth_click.create_group`, `synth_typer.create_app`,
-  `synth_cleo.create_app`, `synth_argparse.create_parser`.
+  `synth_cleo.create_app`, `synth_argparse.create_parser`, `synth_cappa.create_class`.
+  Generated commands use placeholder callbacks (typer: pass `callback=` to receive values).
 - **Help providers**: async lookups of command examples from tldr pages
   (`clinspector.help_providers.tldr_pages.TldrProvider`, `tldr` extra) and man pages
-  (`clinspector.help_providers.man_pages.ManPageProvider`).
+  (`clinspector.help_providers.man_pages.ManPageProvider`, `man-pages` extra).
+- **Help text parser** (experimental): `clinspector.introspect.cliparser.CLIHelpParser`
+  parses raw `--help` output (`help-parser` extra).

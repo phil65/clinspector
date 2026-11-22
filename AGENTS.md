@@ -22,17 +22,20 @@ Its main consumer is mknodes (CLI documentation nodes), so treat the public API
     Each framework is checked with `importlib.util.find_spec` and imported lazily, so
     every framework is optional. Order matters: Typer before Click (Typer wraps Click).
   - `introspect_<framework>.py`: one module per framework, each exposing
-    `get_info(instance, command=None)` (cappa: `get_info(cls)`) plus a recursive `parse`.
+    `get_info(instance, command=None)` plus a recursive `parse`. Subcommand lookup goes
+    through `introspect/_utils.resolve_command` (dot paths, falls back to the root: mknodes
+    passes the program name as `command`).
   - `markdown.py`: `get_cmd_markdown()` renders a command via Jinja2 (`markdown` extra).
-  - `cliparser.py`: experimental parser of raw `--help` text into schemez/pydantic models.
+  - `cliparser.py`: experimental parser of raw `--help` text into schemez/pydantic models
+    (`help-parser` extra).
     Not imported by the package `__init__`.
 - `src/clinspector/synthesis/`: model → framework (`synth_click.create_group`,
   `synth_typer.create_app`, `synth_cleo.create_app`, `synth_argparse.create_parser`,
-  `synth_cappa.create_class`). Not exported from the package root. `synth_cappa` is
-  rudimentary and does not produce working fields.
+  `synth_cappa.create_class`). Not exported from the package root. Help options are
+  skipped (`synthesis.is_help_param`) since every framework adds its own.
 - `src/clinspector/help_providers/`: external help sources. `base.py` defines the
   `HelpProvider` protocol and `CommandHelp`/`Example`; `tldr_pages.py` (`tldr` extra)
-  and `man_pages.py` (fetches via `anyenv`) implement it. All async.
+  and `man_pages.py` (fetches via `anyenv`, `man-pages` extra) implement it. All async.
 - `src/clinspector/log.py`: `get_logger` helper.
 
 ## Where to look
@@ -84,8 +87,9 @@ PyPI release job in `.github/workflows/build.yml`.
   `duties.py`, `.pre-commit-config.yaml`, `mkdocs.yml` and most of `pyproject.toml`
   come from the template. Update with `copier update` rather than hand-editing;
   add dependencies below the `# Only add below (Copier)` markers.
-- Framework support lives in extras (`typer`, `click`, `cleo`, `cappa`, `cyclopts`,
-  `markdown`, `tldr`, `man-pages`, `all`). Note `all` does not include `cyclopts`.
+- The package has no required dependencies. Frameworks and features live in extras
+  (`typer`, `click`, `cleo`, `cappa`, `cyclopts`, `markdown`, `tldr`, `man-pages`,
+  `help-parser`); `all` pulls in every extra.
 - CI tests Python 3.13-3.15 on Linux/macOS/Windows; 3.15 is allowed to fail.
 - The docs site is the mkdocs-mknodes default site: README.md is the index page, the
   rest (API, CLI, dev pages) is generated. `docs/` is empty on purpose.

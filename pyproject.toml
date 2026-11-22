@@ -38,10 +38,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "anyenv[httpx]>=0.5.0",
   # Only add below (Copier)
-  "pydantic>=2.0",
-  "schemez>=0.3.0",
 ]
 
 [project.urls]
@@ -53,20 +50,21 @@ Issues = "https://github.com/phil65/clinspector/issues"
 Source = "https://github.com/phil65/clinspector"
 
 [project.optional-dependencies]
-all = ["click", "typer", "cappa", "cleo"]
-cappa = ["cappa"]
-cleo = ["cleo"]
-click = ["click"]
-cyclopts = ["cyclopts"]
-man-pages = ["hishel>=0.1.1", "httpx"]
-markdown = ["jinja2"]
-tldr = ["tldr"]
-typer = ["typer"]
+all = ["clinspector[cappa,cleo,click,cyclopts,help-parser,man-pages,markdown,tldr,typer]"]
+cappa = ["cappa>=0.33.0"]
+cleo = ["cleo>=2.1.0"]
+click = ["click>=8.5.1"]
+cyclopts = ["cyclopts>=5.5.2"]
+help-parser = ["pydantic>=2.14.4", "schemez>=2.2.30"]
+man-pages = ["anyenv[httpx]>=2.0.18"]
+markdown = ["jinja2>=3.1.6"]
+tldr = ["tldr>=3.4.4"]
+typer = ["typer>=0.29.2"]
 
 [dependency-groups]
 dev = [
   # Only add below (Copier)
-  "cyclopts>=3.24.0",
+  "cyclopts>=5.5.2",
   "deptry",
   "devtools",
   "pyreadline3",
@@ -97,6 +95,10 @@ exclude_lines = [
   "except ImportError",
   'if __name__ == "__main__":',
 ]
+
+[tool.deptry.per_rule_ignores]
+# the `all` extra references the package itself
+DEP002 = ["clinspector"]
 
 [tool.mknodes]
 allowed-commit-types = [
