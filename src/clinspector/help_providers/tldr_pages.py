@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
+import logging
 import re
 from typing import cast
 
 from clinspector.help_providers.base import CommandHelp, Example, HelpProvider
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -34,7 +38,6 @@ class TldrProvider(HelpProvider):
         """Initialize provider."""
         self._cache_initialized = False
         self._init_lock = asyncio.Lock()
-        self._loop = asyncio.get_event_loop()
 
     async def _ensure_cache(self) -> None:
         """Initialize cache if needed."""
@@ -45,7 +48,7 @@ class TldrProvider(HelpProvider):
 
         async with self._init_lock:
             if not self._cache_initialized:
-                await self._loop.run_in_executor(None, tldr.update_cache)
+                await asyncio.to_thread(tldr.update_cache)
                 self._cache_initialized = True
 
     def _clean_command_name(self, cmd: str) -> str:
@@ -56,16 +59,18 @@ class TldrProvider(HelpProvider):
         """Parse a tldr page into CommandHelp."""
         examples: list[Example] = []
         name = ""
-        description = ""
+        description_lines: list[str] = []
         current: TldrExample | None = None
 
         for line_bytes in lines:
-            line = line_bytes.decode().strip()
+            line = line_bytes.decode(errors="replace").strip()
 
             if line.startswith("# "):
                 name = line.removeprefix("# ")
             elif line.startswith("> "):
-                description = line.removeprefix("> ")
+                text = line.removeprefix("> ")
+                if not text.startswith("More information:"):
+                    description_lines.append(text)
             elif line.startswith("- "):
                 if current:
                     examples.append(current.to_example())
@@ -81,6 +86,7 @@ class TldrProvider(HelpProvider):
         if current:
             examples.append(current.to_example())
 
+        description = " ".join(description_lines)
         return CommandHelp(name=name, description=description, examples=examples, platform=platform)
 
     async def get_command_help(self, command: str) -> CommandHelp:
@@ -97,11 +103,11 @@ class TldrProvider(HelpProvider):
 
         for platform_name in ["common", "windows", "linux", "osx"]:
             try:
-                result = await self._loop.run_in_executor(None, get_page, platform_name)
+                result = await asyncio.to_thread(get_page, platform_name)
                 if result:
                     return self._parse_page(result, platform_name)
             except Exception as exc:  # noqa: BLE001
-                print(f"Error fetching {command} for {platform_name}: {exc}")
+                logger.debug("Error fetching %s for %s: %s", command, platform_name, exc)
                 continue
 
         msg = f"No help found for command: {command}"
@@ -112,7 +118,7 @@ class TldrProvider(HelpProvider):
         import tldr
 
         await self._ensure_cache()
-        commands = await self._loop.run_in_executor(None, tldr.get_commands)
+        commands = await asyncio.to_thread(tldr.get_commands)
         return [
             self._clean_command_name(cmd)
             for cmd in commands
@@ -124,7 +130,7 @@ class TldrProvider(HelpProvider):
         import tldr
 
         await self._ensure_cache()
-        commands = await self._loop.run_in_executor(None, tldr.get_commands)
+        commands = await asyncio.to_thread(tldr.get_commands)
         return [self._clean_command_name(cmd) for cmd in commands]
 
 

@@ -3,58 +3,80 @@
 from __future__ import annotations
 
 import dataclasses
-import typing
-from typing import TYPE_CHECKING, Any
+import functools
+import operator
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 import cappa
 
+from clinspector.synthesis import is_help_param
+
 
 if TYPE_CHECKING:
-    from dataclasses import _MISSING_TYPE
-
     from clinspector.models.commandinfo import CommandInfo
     from clinspector.models.param import Param
 
 
-def _create_param_field(
-    param: Param,
-) -> tuple[str, type[str | list[str] | bool], dataclasses.Field[Any]]:
-    """Create a dataclass field for a parameter."""
-    type_hint: type[str | list[str] | bool] = str  # Default type
-    if param.multiple:
-        type_hint = list[str]
-    elif param.is_flag:
-        type_hint = bool
+def _class_name(name: str) -> str:
+    parts = name.replace("-", " ").replace("_", " ").split()
+    return "".join(p.capitalize() for p in parts) or "Command"
 
-    # Create the Cappa Arg
-    arg_kwargs: dict[str, Any] = {
-        "help": param.help,
-        "required": param.required,
-        "hidden": param.hidden,
-    }
 
+def _annotation(param: Param) -> Any:
+    if param.count:
+        return int
+    if param.is_flag:
+        return bool
+    base: Any = Literal[tuple(param.choices)] if param.choices else str  # ty: ignore[invalid-type-form]
+    return list[base] if param.multiple or param.nargs == -1 else base
+
+
+def _default(param: Param) -> Any:
+    if param.required:
+        return dataclasses.MISSING
+    if param.default is not None:
+        return list(param.default) if isinstance(param.default, tuple) else param.default
+    if param.count:
+        return 0
+    if param.is_flag:
+        return False
+    if param.multiple or param.nargs == -1:
+        return dataclasses.field(default_factory=list)
+    return None
+
+
+def _create_field(param: Param) -> tuple[str, Any, Any]:
+    """Create a `make_dataclass` field spec for a parameter."""
+    shorts = [o for o in param.opts if o.startswith("-") and not o.startswith("--")]
+    longs = [o for o in param.opts if o.startswith("--")]
+    arg_kwargs: dict[str, Any] = {"help": param.help, "hidden": param.hidden}
     if param.opts:
-        # Get short and long options
-        short = None
-        long = None
-        for opt in param.opts:
-            if opt.startswith("--"):
-                long = opt.lstrip("-")
-            elif opt.startswith("-"):
-                short = opt.lstrip("-")
-        arg_kwargs.update({"short": short, "long": long})
+        arg_kwargs["short"] = shorts or False
+        arg_kwargs["long"] = longs or False
+    if param.count:
+        arg_kwargs["count"] = True
+    if param.envvar:
+        arg_kwargs["default"] = cappa.Env(param.envvar)
+    annotation = _annotation(param)
+    default = _default(param)
+    if default is None:
+        annotation |= None
+    hint = Annotated[annotation, cappa.Arg(**arg_kwargs)]
+    if isinstance(default, dataclasses.Field):
+        return param.name, hint, default
+    return param.name, hint, dataclasses.field(default=default)
 
-    arg = cappa.Arg[Any](**arg_kwargs)
-    # Create the field with proper metadata typing
-    default_value: Any | _MISSING_TYPE = (
-        param.default if param.default is not None else dataclasses.MISSING
+
+def _has_default(field: dataclasses.Field[Any]) -> bool:
+    return (
+        field.default is not dataclasses.MISSING or field.default_factory is not dataclasses.MISSING
     )
-    field: dataclasses.Field[Any] = dataclasses.field(default=default_value, metadata={0: arg})  # type: ignore
-    return param.name, type_hint, field
 
 
 def create_class(cmd_info: CommandInfo) -> type[Any]:
-    """Create a Cappa dataclass from a CommandInfo object.
+    """Create a Cappa command class (a dataclass) from a CommandInfo object.
+
+    Subcommands become nested command classes, collected in a `subcommand` field.
 
     Args:
         cmd_info: The CommandInfo object to convert
@@ -62,101 +84,26 @@ def create_class(cmd_info: CommandInfo) -> type[Any]:
     Returns:
         A dataclass decorated with cappa.command
     """
-    # Sort parameters - required ones first
-    sorted_params = sorted(cmd_info.params, key=lambda p: (p.default is not None, p.name))
+    fields = [_create_field(p) for p in cmd_info.params if not is_help_param(p)]
+    # dataclasses require fields without defaults to come first
+    fields.sort(key=lambda f: _has_default(f[2]))
+    if cmd_info.subcommands:
+        sub_classes = [create_class(sub) for sub in cmd_info.subcommands.values()]
+        union = functools.reduce(operator.or_, sub_classes)
+        hint = Annotated[union, cappa.Subcommand()]  # ty: ignore[invalid-type-form]
+        fields.insert(0, ("subcommand", hint, dataclasses.field()))
 
-    # Create the callback first
-    def dummy_callback(**kwargs: Any) -> None:
+    def invoke(**kwargs: Any) -> None:
         """Placeholder callback."""
         print(f"Called {cmd_info.name} with: {kwargs}")
 
-    # Create class with cappa's command decorator
-    @cappa.command(name=cmd_info.name, help=cmd_info.description, invoke=dummy_callback)  # ty: ignore[not-callable]
-    class DynamicCommand:
-        """Dynamic command class."""
-
-        for param in sorted_params:
-            if param.opts:  # It's an option
-                opt_type: type[str | list[str] | bool]
-                if param.multiple:
-                    opt_type = list[str]
-                elif param.is_flag:
-                    opt_type = bool
-                else:
-                    opt_type = str
-                # Get short and long options
-                short = None
-                long = None
-                for opt in param.opts:
-                    if opt.startswith("--"):
-                        long = opt.lstrip("-")
-                    elif opt.startswith("-"):
-                        short = opt.lstrip("-")
-
-                locals()[param.name] = typing.Annotated[
-                    opt_type,
-                    cappa.Arg(
-                        help=param.help,
-                        short=short,
-                        long=long,
-                        required=param.required,
-                        default=param.default,
-                    ),
-                ]
-            else:  # It's a positional argument
-                arg = cappa.Arg(
-                    help=param.help,
-                    required=param.required,
-                    default=param.default,
-                )
-                locals()[param.name] = (
-                    typing.Annotated[list[str], arg]
-                    if param.multiple
-                    else typing.Annotated[str, arg]
-                )
-
-    return DynamicCommand
-
-
-if __name__ == "__main__":
-    import sys
-
-    from clinspector.models.commandinfo import CommandInfo
-    from clinspector.models.param import Param
-
-    # Example usage
-    params = [
-        Param(name="name", help="Name to greet", required=True),
-        Param(name="count", help="Number of greetings", opts=["--count", "-c"], default=1),
-        Param(name="excited", help="Add exclamation marks", is_flag=True, opts=["--excited", "-e"]),
-    ]
-    info = CommandInfo(name="greet", description="A greeting command", params=params)
-    GreetCommand = create_class(info)
-
-    sys.exit(GreetCommand())  # cappa adds __call__ to run the command
-
-
-# if __name__ == "__main__":
-#     import sys
-
-#     from clinspector.models.commandinfo import CommandInfo
-#     from clinspector.models.param import Param
-
-#     # Example usage
-#     info = CommandInfo(
-#         name="greet",
-#         description="A greeting command",
-#         params=[
-#             Param(name="name", help="Name to greet", required=True),
-#             Param(name="count", help="Number of greetings", opts=["--count", "-c"], default=1),
-#             Param(
-#                 name="excited",
-#                 help="Add exclamation marks",
-#                 is_flag=True,
-#                 opts=["--excited", "-e"],
-#             ),
-#         ],
-#     )
-
-#     GreetCommand = create_class(info)
-#     GreetCommand.run(sys.argv[1:])
+    cls = dataclasses.make_dataclass(_class_name(cmd_info.name), fields)
+    cls.__doc__ = cmd_info.description or None
+    return cappa.command(  # ty: ignore[not-callable]
+        cls,
+        name=cmd_info.name,
+        help=cmd_info.description or None,
+        hidden=cmd_info.hidden,
+        deprecated=cmd_info.deprecated,
+        invoke=invoke,
+    )

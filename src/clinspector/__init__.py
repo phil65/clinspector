@@ -1,6 +1,6 @@
 """CLInspector: main package.
 
-A library to parse CLI output into structured data.
+Introspect Python CLI apps (Typer, Click, Cleo, Cappa, Cyclopts, argparse) into structured data.
 """
 
 from __future__ import annotations

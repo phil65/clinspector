@@ -1,0 +1,45 @@
+from __future__ import annotations
+
+from clinspector import CommandInfo, Param
+
+
+def _info() -> CommandInfo:
+    params = [
+        Param(name="target", param_type_name="argument"),
+        Param(name="tag", opts=["-t", "--tag"], multiple=True),
+        Param(name="verbose", opts=["-v"], is_flag=True, count=True),
+        Param(name="color", opts=["--color"], secondary_opts=["--no-color"], is_flag=True),
+        Param(name="dry_run", opts=["--dry-run"], is_flag=True),
+        Param(name="mode", opts=["--mode"]),
+    ]
+    sub = CommandInfo(name="build", params=params)
+    return CommandInfo(name="tool", subcommands={"build": sub})
+
+
+def test_full_path():
+    info = _info()
+    assert info["build"].full_path == ["tool", "build"]
+    assert info.subcommands["build"].full_command == "tool build"
+
+
+def test_build_cli_command():
+    build = _info()["build"]
+    args = {
+        "target": "x",
+        "tag": ["a", "b"],
+        "verbose": 2,
+        "color": False,
+        "dry_run": False,
+        "mode": "fast",
+    }
+    assert build.build_cli_command(args) == [
+        *("tool", "build", "x"),
+        *("-t", "a", "-t", "b"),
+        *("-v", "-v"),
+        "--no-color",
+        *("--mode", "fast"),
+    ]
+    assert build.build_cli_command({"verbose": True, "dry_run": True}) == [
+        *("tool", "build", "-v", "--dry-run"),
+    ]
+    assert build.build_cli_command() == ["tool", "build"]

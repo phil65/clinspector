@@ -45,7 +45,7 @@ class CommandInfo:
     def __getitem__(self, name: str) -> CommandInfo:
         """Get a subcommand by name."""
         subcmd = self.subcommands[name]
-        subcmd._parent = self  # Ensure parent is set
+        subcmd._parent = self  # Ensure parent is set (subcommands may be added later)
         return subcmd
 
     @property
@@ -88,6 +88,10 @@ class CommandInfo:
     def build_cli_command(self, args: dict[str, Any] | None = None) -> list[str]:
         """Build the command line parts for execution.
 
+        List / tuple values are repeated for options (`--opt a --opt b`) and
+        expanded for arguments. Integer values for counting flags repeat the flag,
+        False for flags with secondary options (`--x/--no-x`) emits the secondary one.
+
         Args:
             args: Dictionary of parameter name to value mappings
 
@@ -100,15 +104,19 @@ class CommandInfo:
             value = args.get(p.name)
             if value is None:
                 continue
-            if p.opts:
-                if p.is_flag:
-                    if value:
-                        cmd_parts.append(p.opts[0])
-                else:
+            values = list(value) if isinstance(value, list | tuple) else [value]
+            if not p.opts:
+                cmd_parts.extend(str(v) for v in values)
+            elif p.count and not isinstance(value, bool):
+                cmd_parts.extend([p.opts[0]] * int(value))
+            elif p.is_flag:
+                if value:
                     cmd_parts.append(p.opts[0])
-                    cmd_parts.append(str(value))
+                elif p.secondary_opts:
+                    cmd_parts.append(p.secondary_opts[0])
             else:
-                cmd_parts.append(str(value))
+                for v in values:
+                    cmd_parts.extend([p.opts[0], str(v)])
 
         return cmd_parts
 
@@ -149,7 +157,7 @@ class CommandInfo:
         check: bool = True,
         env: dict[str, str] | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        """Execute this command via shell (allows pipes, redirects, etc).
+        """Execute this command through the system shell (parts are shell-quoted).
 
         Args:
             args: Dictionary of parameter name to value mappings
@@ -173,10 +181,3 @@ class CommandInfo:
             env=env,
             shell=True,
         )
-
-
-if __name__ == "__main__":
-    from pprint import pprint
-
-    info = CommandInfo("A", "B")
-    pprint(info)

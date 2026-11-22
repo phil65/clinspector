@@ -2,45 +2,48 @@
 
 from __future__ import annotations
 
-from cleo.application import Application
-from cleo.commands.command import Command
+from typing import TYPE_CHECKING
 
+from clinspector.introspect._utils import resolve_command
 from clinspector.models import commandinfo, param
 
 
-def _parse_command(command: Command) -> commandinfo.CommandInfo:
+if TYPE_CHECKING:
+    from cleo.application import Application
+    from cleo.commands.command import Command
+
+
+def _parse_command(command: Command, name: str | None = None) -> commandinfo.CommandInfo:
     """Parse a Cleo Command into a CommandInfo object."""
-    # Get definition object which contains argument/option configurations
     definition = command.definition
-    # Parse arguments
     params = [
         param.Param(
             name=argument.name,
-            help=argument.description,
+            help=argument.description or None,
             default=argument.default,
-            required=argument._required,
+            required=argument.is_required(),
             param_type_name="argument",
-            multiple=argument._is_list,
+            multiple=argument.is_list(),
+            nargs=-1 if argument.is_list() else 1,
         )
         for argument in definition.arguments
     ] + [
         param.Param(
             name=option.name,
-            help=option.description,
+            help=option.description or None,
             default=option.default,
-            opts=[f"--{option.name}"] + ([f"-{option.shortcut}"] if option.shortcut else []),
-            # required=option.required,
-            is_flag=option._flag,
-            multiple=option._is_list,
+            opts=[f"-{s}" for s in (option.shortcut or "").split("|") if s] + [f"--{option.name}"],
+            is_flag=option.is_flag(),
+            multiple=option.is_list(),
             param_type_name="option",
         )
         for option in definition.options
     ]
-
+    cmd_name = name or command.name or ""
     return commandinfo.CommandInfo(
-        name=command.name or "",
+        name=cmd_name,
         description=command.description,
-        # usage=command._synopsis,
+        usage=command.synopsis().strip() or cmd_name,
         params=params,
         hidden=command.hidden,
         callback=command.handle,
@@ -49,15 +52,18 @@ def _parse_command(command: Command) -> commandinfo.CommandInfo:
 
 def parse(app: Application) -> commandinfo.CommandInfo:
     """Parse a Cleo Application into a CommandInfo object."""
-    default_cmd_name = app._default_command  # Get the default command (usually "list")
-    default_cmd = app._commands[default_cmd_name]  # Get actual command object
-    sub_cmds = {n: _parse_command(cmd) for n, cmd in app._commands.items() if n != default_cmd_name}
+    default_cmd_name = app._default_command  # usually "list"
+    commands = app.all()  # also resolves lazily loaded commands
+    sub_cmds = {
+        n: _parse_command(cmd, name=n) for n, cmd in commands.items() if n != default_cmd_name
+    }
+    default_cmd = commands.get(default_cmd_name)
     return commandinfo.CommandInfo(
         name=app.name or "",
         description=app.long_version or "",
-        # usage=app.definition,  # TODO
+        usage=f"{app.name} [options] [--] <command> [<arguments>]",
         subcommands=sub_cmds,
-        params=_parse_command(default_cmd).params,
+        params=_parse_command(default_cmd).params if default_cmd else [],
     )
 
 
@@ -66,45 +72,6 @@ def get_info(instance: Application, command: str | None = None) -> commandinfo.C
 
     Args:
         instance: A Cleo Application instance
-        command: The command to get info for
+        command: The command to get info for (e.g. `"cache clear"`).
     """
-    info = parse(instance)
-    if command:
-        return info.subcommands.get(command, info)
-    return info
-
-
-if __name__ == "__main__":
-    import typing
-
-    from cleo.helpers import argument, option
-
-    # Example usage with a simple Cleo application
-    class GreetCommand(Command):
-        name = "greet"
-        description = "Greets someone"
-        arguments: typing.ClassVar = [
-            argument("name", description="Who do you want to greet?", optional=True)
-        ]
-        options: typing.ClassVar = [
-            option(
-                "yell",
-                "y",
-                description="If set, the task will yell in uppercase letters",
-                flag=True,
-            )
-        ]
-
-        def handle(self) -> int:
-            name = self.argument("name")
-            text = f"Hello {name}" if name else "Hello"
-            if self.option("yell"):
-                text = text.upper()
-            self.line(text)
-            return 0  # TODO: what to return here?
-
-    app = Application()
-    app.add(GreetCommand())
-
-    info = get_info(app)
-    print(info)
+    return resolve_command(parse(instance), command)

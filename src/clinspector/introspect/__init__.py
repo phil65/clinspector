@@ -16,56 +16,56 @@ def get_cmd_info(  # noqa: PLR0911
 
     Instance can be
     - a `Typer` instance
-    - a **click** `Group` instance
-    - an `ArgumentParser` instance
-    - a cappa dataclass (decorated with `@cappa.command`)
+    - a **click** `Command` / `Group` instance
     - a cleo `Application` instance
+    - a cappa command class
     - a cyclopts `App` instance
+    - an `ArgumentParser` instance
 
     Args:
         instance: A supported CLI instance
-        command: An optional specific subcommand to fetch info for.
+        command: An optional subcommand to fetch info for. Nested subcommands can be
+                 addressed with dot notation (`"group.subcommand"`). If the subcommand
+                 does not exist, info for the root command is returned.
 
     Returns:
         The command info, or None if the instance type is not supported.
     """
     if importlib.util.find_spec("typer"):
-        from clinspector.introspect.introspect_typer import get_info as typer_info
         import typer
 
         if isinstance(instance, typer.Typer):
+            from clinspector.introspect.introspect_typer import get_info as typer_info
+
             return typer_info(instance, command=command)
 
     if importlib.util.find_spec("click"):
-        from clinspector.introspect.introspect_click import get_info as click_info
         import click
 
-        if isinstance(instance, click.Group):
+        if isinstance(instance, click.Command):
+            from clinspector.introspect.introspect_click import get_info as click_info
+
             return click_info(instance, command=command)
 
     if importlib.util.find_spec("cleo"):
-        from clinspector.introspect.introspect_cleo import get_info as cleo_info
         from cleo.application import Application
 
         if isinstance(instance, Application):
+            from clinspector.introspect.introspect_cleo import get_info as cleo_info
+
             return cleo_info(instance, command=command)
 
-    if importlib.util.find_spec("cappa"):
+    if importlib.util.find_spec("cappa") and hasattr(instance, "__cappa__"):
         from clinspector.introspect.introspect_cappa import get_info as cappa_info
 
-        if hasattr(instance, "__cappa__"):
-            return cappa_info(instance)  # TODO
+        return cappa_info(instance, command=command)
 
     if importlib.util.find_spec("cyclopts"):
-        from clinspector.introspect.introspect_cyclopts import get_info as cyclopts_info
+        import cyclopts
 
-        # Check if it's a cyclopts App by looking for distinctive attributes
-        if (
-            hasattr(instance, "_commands")
-            and hasattr(instance, "default_command")
-            and hasattr(instance, "name")
-            and hasattr(instance, "help_flags")
-        ):
+        if isinstance(instance, cyclopts.App):
+            from clinspector.introspect.introspect_cyclopts import get_info as cyclopts_info
+
             return cyclopts_info(instance, command=command)
 
     if isinstance(instance, argparse.ArgumentParser):

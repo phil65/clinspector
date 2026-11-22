@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import typer
+
+from clinspector.synthesis import is_help_param
 
 
 if TYPE_CHECKING:
@@ -15,72 +17,71 @@ if TYPE_CHECKING:
     from clinspector.models.param import Param
 
 
-def _param_to_option(param: Param) -> dict[str, Any]:
-    """Convert a Param to Typer Option arguments."""
-    kwargs: dict[str, Any] = {
-        "help": param.help,
-        "default": param.default,
-        "hidden": param.hidden,
-        "envvar": param.envvar,
-    }
-
-    if param.multiple:
-        kwargs["multiple"] = True
+def _annotation(param: Param) -> Any:
+    """Return a type annotation matching the given param."""
+    if param.count:
+        return int
     if param.is_flag:
-        kwargs["is_flag"] = True
-    if param.required and param.default is None:
-        # For required parameters without default, use ... with param name
-        kwargs["default"] = typer.Option(param.name, required=True)  # type: ignore
-    if param.metavar:
-        kwargs["metavar"] = param.metavar
+        return bool
+    base: Any = Literal[tuple(param.choices)] if param.choices else str  # ty: ignore[invalid-type-form]
+    return list[base] if param.multiple or param.nargs == -1 else base
 
-    return kwargs
+
+def _typer_param(param: Param) -> Any:
+    """Return a `typer.Option` / `typer.Argument` for the given param."""
+    default = ... if param.required else param.default
+    if param.opts:
+        decls = list(param.opts)
+        if param.secondary_opts:
+            decls = [f"{decls[0]}/{param.secondary_opts[0]}", *decls[1:]]
+        if param.count and default is None:
+            default = 0
+        if param.is_flag and not param.count and default is None:
+            default = False
+        return typer.Option(
+            default,
+            *decls,
+            help=param.help,
+            hidden=param.hidden,
+            envvar=param.envvar,
+            metavar=param.metavar,
+            count=param.count,
+        )
+    return typer.Argument(default, help=param.help, hidden=param.hidden, metavar=param.metavar)
 
 
 def _create_callback(
     cmd_info: CommandInfo,
-    app: typer.Typer,
+    callback: Callable[..., Any] | None = None,
 ) -> Callable[..., Any]:
-    """Create a callback function for a command."""
-    params = []
-    for param in cmd_info.params:
-        # Use Any as base for param_type to allow both str and list[str]
-        param_type: type[str | list[str] | bool] = str  # Default type
-        if param.opts:
-            # It's an option - use typer.Option
-            option_kwargs = _param_to_option(param)
-            del option_kwargs["default"]  # Remove default from kwargs
-            if param.multiple:
-                param_type = list[str]
-            elif param.is_flag:
-                param_type = bool
-            default_or_param = typer.Option(param.default, *param.opts, **option_kwargs)
-        else:
-            # It's an argument - use typer.Argument
-            arg_kwargs = {"help": param.help, "hidden": param.hidden}
-            if param.multiple:
-                param_type = list[str]
-            default_or_param = typer.Argument(param.default, **arg_kwargs)  # type: ignore
-        params.append(
-            inspect.Parameter(
-                name=param.name,
-                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                default=default_or_param,
-                annotation=param_type,
-            )
+    """Create a callback function with a signature matching the command's params.
+
+    Args:
+        cmd_info: The command to create a callback for
+        callback: Function receiving the parsed values as keyword arguments.
+                  If not given, a placeholder echoing the values is used.
+    """
+    params = [
+        inspect.Parameter(
+            name=p.name,
+            kind=inspect.Parameter.KEYWORD_ONLY,
+            default=_typer_param(p),
+            annotation=_annotation(p),
         )
+        for p in cmd_info.params
+        if not is_help_param(p)
+    ]
 
-    # Create a dynamic function with the correct signature
-    def callback(*args: Any, **kwargs: Any) -> int:
-        # This is a placeholder - in real usage you'd want to pass a real callback
-        typer.echo(f"Called {cmd_info.name} with {args} {kwargs}")
-        return 0  # Return success code
+    def wrapper(**kwargs: Any) -> Any:
+        if callback is not None:
+            return callback(**kwargs)
+        typer.echo(f"Called {cmd_info.name} with {kwargs}")
+        return None
 
-    callback.__signature__ = inspect.Signature(params)  # type: ignore
-    callback.__name__ = cmd_info.name
-    callback.__doc__ = cmd_info.description
-
-    return callback
+    wrapper.__signature__ = inspect.Signature(params)  # ty: ignore[missing-attribute]
+    wrapper.__name__ = cmd_info.name.replace("-", "_") or "main"
+    wrapper.__doc__ = cmd_info.description
+    return wrapper
 
 
 def create_app(
@@ -102,40 +103,21 @@ def create_app(
         no_args_is_help=True,
     )
 
-    if cmd_info.params:
+    if callback or any(not is_help_param(p) for p in cmd_info.params):
         # If the main command has parameters, create a callback for it
-        main_callback = callback or _create_callback(cmd_info, app)
-        app.callback()(main_callback)
+        app.callback()(_create_callback(cmd_info, callback))
 
     # Add all subcommands recursively
-    for subcmd in cmd_info.subcommands.values():
+    for name, subcmd in cmd_info.subcommands.items():
         if subcmd.subcommands:
-            # It's a group - create a sub-Typer
-            subapp = create_app(subcmd)
-            app.add_typer(subapp, name=subcmd.name)
+            app.add_typer(create_app(subcmd), name=name, hidden=subcmd.hidden)
         else:
-            # It's a command - create a callback
-            cmd_callback = _create_callback(subcmd, app)
             app.command(
-                name=subcmd.name,
+                name=name,
                 help=subcmd.description,
                 hidden=subcmd.hidden,
-            )(cmd_callback)
+                deprecated=subcmd.deprecated,
+                epilog=subcmd.epilog,
+            )(_create_callback(subcmd))
 
     return app
-
-
-if __name__ == "__main__":
-    from clinspector.models.commandinfo import CommandInfo
-    from clinspector.models.param import Param
-
-    # Example usage
-    sub_params = [
-        Param(name="name", help="Name to greet", required=True),
-        Param(name="count", help="Number of greetings", opts=["--count", "-c"], default=1),
-    ]
-    params = [Param(name="verbose", help="Increase verbosity", is_flag=True, opts=["-v"])]
-    sub_cmds = {"hello": CommandInfo(name="hello", description="Say hello", params=sub_params)}
-    info = CommandInfo(name="mycli", description="Sample CLI", params=params, subcommands=sub_cmds)
-    app = create_app(info)
-    app()

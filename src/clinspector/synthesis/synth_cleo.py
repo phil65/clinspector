@@ -17,87 +17,91 @@ if TYPE_CHECKING:
     from clinspector.models.param import Param
 
 
+_APP_OPTIONS = {"help", "quiet", "verbose", "version", "ansi", "no-ansi", "no-interaction"}
+
+
 def _param_to_config(param: Param) -> tuple[Argument | Option, dict[str, str]]:
     """Convert a Param to Cleo argument/option configuration."""
     if param.opts:  # It's an option
-        long_name = None
-        short_name = None
-        for opt in param.opts:
-            if opt.startswith("--"):
-                long_name = opt.lstrip("-")
-            elif opt.startswith("-"):
-                short_name = opt.lstrip("-")
-
-        if not long_name:
-            long_name = param.name
-
+        long_name = next((o[2:] for o in param.opts if o.startswith("--")), param.name)
+        shorts = [o[1:] for o in param.opts if o.startswith("-") and not o.startswith("--")]
+        is_flag = param.is_flag or param.count
+        default = None if is_flag else param.default
+        if param.multiple and default is not None:
+            default = list(default) if isinstance(default, list | tuple) else [default]
         return (
             option(
                 long_name=long_name,
-                short_name=short_name,
+                short_name="|".join(shorts) or None,
                 description=param.help,
-                flag=param.is_flag,
-                value_required=not param.is_flag,
+                flag=is_flag,
+                value_required=not is_flag,
                 multiple=param.multiple,
-                default=param.default,
+                default=default,
             ),
             {"option": long_name},
         )
 
     # It's an argument
+    default = None if param.required else param.default
+    if param.multiple and default is not None:
+        default = list(default) if isinstance(default, list | tuple) else [default]
     return (
         argument(
             name=param.name,
             description=param.help,
             optional=not param.required,
             multiple=param.multiple,
-            default=param.default,
+            default=default,
         ),
         {"argument": param.name},
     )
 
 
-def _create_command_class(cmd_info: CommandInfo) -> type[Command]:
+def _create_command_class(cmd_info: CommandInfo, name: str | None = None) -> type[Command]:
     """Create a Cleo Command class from a CommandInfo object."""
-    arguments: list[Argument] = []
-    options: list[Option] = []
+    args: list[Argument] = []
+    opts: list[Option] = []
     param_getters: dict[str, dict[str, str]] = {}
 
     for param in cmd_info.params:
+        if param.opts and param.name in _APP_OPTIONS:
+            continue  # added by the cleo Application itself
         config, getter = _param_to_config(param)
         param_getters[param.name] = getter
         if isinstance(config, Argument):
-            arguments.append(config)
+            args.append(config)
         else:
-            options.append(config)
+            opts.append(config)
 
     # Create the command class
     class DynamicCommand(Command):
-        name = cmd_info.name
-        description = cmd_info.description or ""
-        hidden = cmd_info.hidden
-
-        arguments_: ClassVar = arguments
-        options_: ClassVar = options
+        arguments: ClassVar[list[Argument]] = args  # type: ignore[misc]
+        options: ClassVar[list[Option]] = opts  # type: ignore[misc]
 
         def handle(self) -> int:
             """Execute the command."""
             values = {}
-            for name, getter in param_getters.items():
+            for param_name, getter in param_getters.items():
                 if "argument" in getter:
-                    values[name] = self.argument(getter["argument"])
+                    values[param_name] = self.argument(getter["argument"])
                 else:
-                    values[name] = self.option(getter["option"])
+                    values[param_name] = self.option(getter["option"])
 
             # This is where you'd handle the actual command execution
             self.line(f"Command {self.name} called with values: {values}")
             return 0
 
+    DynamicCommand.name = name or cmd_info.name
+    DynamicCommand.description = cmd_info.description or ""
+    DynamicCommand.hidden = cmd_info.hidden
     return DynamicCommand
 
 
 def create_app(cmd_info: CommandInfo) -> Application:
     """Create a Cleo Application from a CommandInfo object.
+
+    Nested subcommands are registered with space-separated names (`"group sub"`).
 
     Args:
         cmd_info: The CommandInfo object to convert
@@ -108,33 +112,16 @@ def create_app(cmd_info: CommandInfo) -> Application:
     app = Application(name=cmd_info.name, version="1.0.0")
 
     # Create default command if main command has parameters
-    if cmd_info.params:
+    if any(p.name not in _APP_OPTIONS for p in cmd_info.params):
         app.add(_create_command_class(cmd_info)())
 
     # Add all subcommands recursively
-    def add_commands(commands: dict[str, CommandInfo]) -> None:
-        for subcmd in commands.values():
-            cmd_class = _create_command_class(subcmd)
-            app.add(cmd_class())
+    def add_commands(commands: dict[str, CommandInfo], prefix: str = "") -> None:
+        for name, subcmd in commands.items():
+            full_name = f"{prefix}{name}"
+            app.add(_create_command_class(subcmd, name=full_name)())
             if subcmd.subcommands:
-                add_commands(subcmd.subcommands)
+                add_commands(subcmd.subcommands, prefix=f"{full_name} ")
 
     add_commands(cmd_info.subcommands)
-
     return app
-
-
-if __name__ == "__main__":
-    from clinspector.models.commandinfo import CommandInfo
-    from clinspector.models.param import Param
-
-    # Example usage
-    params = [Param(name="verbose", help="Increase verbosity", is_flag=True, opts=["-v"])]
-    sub_params = [
-        Param(name="name", help="Name to greet", required=True),
-        Param(name="count", help="Number of greetings", opts=["--count", "-c"], default=1),
-    ]
-    sub_cmds = {"hello": CommandInfo(name="hello", description="Say hello", params=params)}
-    info = CommandInfo(name="mycli", description="Sample CLI", params=params, subcommands=sub_cmds)
-    app = create_app(info)
-    app.run()

@@ -56,10 +56,3 @@ class Param:
     def opt_str(self) -> str:
         """A formatted and sorted string containing the the options."""
         return ", ".join(f"`{i}`" for i in reversed(self.opts))
-
-
-if __name__ == "__main__":
-    from pprint import pprint
-
-    info = Param(name="test")
-    pprint(info)

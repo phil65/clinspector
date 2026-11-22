@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Literal
 
 from cyclopts.command_spec import CommandSpec
 
+from clinspector.introspect._utils import first_envvar, resolve_command
 from clinspector.models import commandinfo, param
 
 
@@ -71,7 +72,7 @@ def _extract_params_from_app(app: App) -> list[param.Param]:
                 multiple=getattr(parameter, "multiple", False),
                 hidden=not parameter.show,
                 metavar=getattr(parameter, "metavar", None),
-                envvar=env_var if isinstance((env_var := parameter.env_var), str | None) else None,
+                envvar=first_envvar(parameter.env_var),
             )
             params.append(p)
 
@@ -109,7 +110,7 @@ def _parse_app(app: App, parent_name: str = "") -> commandinfo.CommandInfo:
         CommandInfo object
     """
     # Get app name - cyclopts apps can have multiple names via tuples
-    name = "" if not app.name else app.name[0] if app.name else ""
+    name = app.name[0] if app.name else ""
     # Build full name including parent
     full_name = f"{parent_name} {name}".strip() if parent_name else name
     usage = app.usage if app.usage else full_name  # Get usage string
@@ -146,7 +147,7 @@ def _parse_app(app: App, parent_name: str = "") -> commandinfo.CommandInfo:
     )
 
 
-def get_info(instance: Any, command: str | None = None) -> commandinfo.CommandInfo:
+def get_info(instance: App, command: str | None = None) -> commandinfo.CommandInfo:
     """Return a CommandInfo object for command of given cyclopts App.
 
     Args:
@@ -156,48 +157,4 @@ def get_info(instance: Any, command: str | None = None) -> commandinfo.CommandIn
     Returns:
         CommandInfo object with extracted information
     """
-    info = _parse_app(instance)
-
-    if command:
-        # Navigate to specific subcommand using dot notation
-        for cmd in command.split("."):
-            if cmd in info.subcommands:
-                info = info.subcommands[cmd]
-            else:
-                # Command not found, return empty info
-                desc = f"Command '{cmd}' not found"
-                return commandinfo.CommandInfo(name=cmd, description=desc)
-
-    return info
-
-
-if __name__ == "__main__":
-    # Example usage - would need cyclopts installed
-    try:
-        import cyclopts
-
-        app = cyclopts.App(name="example", help="Example cyclopts application")
-
-        @app.default
-        def main(name: str = "World", count: int = 1, verbose: bool = False) -> None:
-            """Main command that greets someone."""
-            for _ in range(count):
-                greeting = f"Hello, {name}!"
-                if verbose:
-                    print(f"Verbose: {greeting}")
-                else:
-                    print(greeting)
-
-        @app.command
-        def subcommand(arg: str, flag: bool = False) -> None:
-            """A subcommand example."""
-            print(f"Subcommand called with arg={arg}, flag={flag}")
-
-        info = get_info(app)
-        print(f"App: {info.name}")
-        print(f"Description: {info.description}")
-        print(f"Parameters: {len(info.params)}")
-        print(f"Subcommands: {list(info.subcommands.keys())}")
-
-    except ImportError:
-        print("cyclopts not available for testing")
+    return resolve_command(_parse_app(instance), command)

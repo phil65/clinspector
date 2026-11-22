@@ -7,7 +7,11 @@ from clinspector import get_cmd_info
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from jinja2 import Environment
+
+    from clinspector.models.commandinfo import CommandInfo
 
 
 def _get_jinja_env() -> Environment:
@@ -16,21 +20,19 @@ def _get_jinja_env() -> Environment:
         msg = "jinja2 is required for markdown generation. Install 'clinspector[markdown]'."
         raise ImportError(msg)
 
-    from jinja2 import Environment, select_autoescape
+    from jinja2 import Environment
 
-    escape = select_autoescape(["html", "xml"])
-    env = Environment(autoescape=escape, trim_blocks=True, lstrip_blocks=True)
-    # Add custom filters
-    env.filters["md_style"] = lambda text, bold=False, italic=False: (
-        f"**{text}**" if bold else (f"*{text}*" if italic else text)
-    )
-
-    return env
+    # Output is Markdown, so no HTML escaping.
+    return Environment(autoescape=False, trim_blocks=True, lstrip_blocks=True)
 
 
 # Template definitions
 _PARAM_TEMPLATE = """
+{% if param.param_type_name == "argument" or not param.opts %}
+### {{ param.name.upper() }}
+{% else %}
 ### {{ param.opt_str }}
+{% endif %}
 
 {% if param.required %}
 **REQUIRED**
@@ -41,8 +43,11 @@ Environment variable: {{ param.envvar }}
 {% if param.multiple %}
 **Multiple values allowed.**
 {% endif %}
-{% if param.default %}
+{% if param.default is not none and param.default not in ((), [], "") %}
 **Default:** {{ param.default }}
+{% endif %}
+{% if param.choices %}
+**Choices:** {{ param.choices | join(", ") }}
 {% endif %}
 {% if param.is_flag %}
 **Flag**
@@ -61,21 +66,18 @@ _COMMAND_TEMPLATE = """
 {{ info.usage }}
 ```
 
-{% for param in info.params %}
-{{ param_template | render(param=param) }}
+{% for param in params %}
+{{ param_template.render(param=param) }}
 {% endfor %}
 """
 
-_OUTPUT_TEMPLATE = """
-{% if info %}
-{{ command_template | render(info=info) }}
-{% if include_subcommands %}
-{% for sub_name, sub_info in info.subcommands.items() %}
-{{ command_template | render(info=sub_info) }}
-{% endfor %}
-{% endif %}
-{% endif %}
-"""
+
+def _iter_commands(info: CommandInfo, recursive: bool) -> Iterator[CommandInfo]:
+    yield info
+    if recursive:
+        for sub in info.subcommands.values():
+            if not sub.hidden:
+                yield from _iter_commands(sub, recursive)
 
 
 def get_cmd_markdown(
@@ -85,10 +87,12 @@ def get_cmd_markdown(
 ) -> str:
     """Generate markdown documentation for a command.
 
+    Hidden parameters and subcommands are left out.
+
     Args:
         instance: A CLI app instance (Typer, Click, etc.)
-        command: Optional specific command to document
-        include_subcommands: Whether to include documentation for subcommands
+        command: Optional specific command to document (supports dot notation)
+        include_subcommands: Whether to include documentation for (nested) subcommands
 
     Returns:
         Formatted markdown string with command documentation
@@ -98,14 +102,13 @@ def get_cmd_markdown(
         return ""
 
     env = _get_jinja_env()
-
-    templates = {"command_template": _COMMAND_TEMPLATE, "param_template": _PARAM_TEMPLATE}
-
-    # Define render function for templates to use.
-    # Sub-templates are passed on so that nested renders can access them.
-    def render_template(template_str: str, **kwargs: Any) -> str:
-        template = env.from_string(template_str)
-        return template.render(**templates, **kwargs)
-
-    env.filters["render"] = render_template
-    return render_template(_OUTPUT_TEMPLATE, info=info, include_subcommands=include_subcommands)
+    param_template = env.from_string(_PARAM_TEMPLATE)
+    command_template = env.from_string(_COMMAND_TEMPLATE)
+    return "\n".join(
+        command_template.render(
+            info=cmd,
+            params=[p for p in cmd.params if not p.hidden],
+            param_template=param_template,
+        )
+        for cmd in _iter_commands(info, include_subcommands)
+    )

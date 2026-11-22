@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 from typing import TYPE_CHECKING, Any
 
+from clinspector.synthesis import is_help_param
+
 
 if TYPE_CHECKING:
     from clinspector.models.commandinfo import CommandInfo
@@ -18,27 +20,60 @@ def _add_param(parser: argparse.ArgumentParser, param: Param) -> None:
         parser: The parser to add the parameter to
         param: The parameter to add
     """
+    if is_help_param(param):
+        return
     kwargs: dict[str, Any] = {
-        "help": param.help,
+        "help": argparse.SUPPRESS if param.hidden else param.help,
         "default": param.default,
     }
-
-    if param.multiple:
-        kwargs["nargs"] = "*"
+    if param.choices:
+        kwargs["choices"] = param.choices
     if param.metavar:
         kwargs["metavar"] = param.metavar
-    if param.is_flag:
-        kwargs["action"] = "store_true"
 
     if param.opts:  # It's an optional argument
-        kwargs["required"] = param.required
+        kwargs["dest"] = param.name
+        if param.count:
+            kwargs["action"] = "count"
+            kwargs.pop("metavar", None)
+        elif param.is_flag:
+            kwargs["action"] = (
+                argparse.BooleanOptionalAction if param.secondary_opts else "store_true"
+            )
+            kwargs.pop("metavar", None)
+            kwargs.pop("choices", None)
+            if param.default is None:
+                kwargs["default"] = False
+        elif param.multiple:
+            kwargs["action"] = "append"
+        if param.required:
+            kwargs["required"] = True
         parser.add_argument(*param.opts, **kwargs)
     else:  # It's a positional argument
-        # Don't include 'required' for positional arguments
-        # If it's optional, use nargs='?' if not already set
-        if not param.required and "nargs" not in kwargs:
+        if param.multiple or param.nargs == -1:
+            kwargs["nargs"] = "+" if param.required else "*"
+        elif not param.required:
             kwargs["nargs"] = "?"
+        elif isinstance(param.nargs, int | str) and param.nargs not in (1, None):
+            kwargs["nargs"] = param.nargs
         parser.add_argument(param.name, **kwargs)
+
+
+def _populate(parser: argparse.ArgumentParser, cmd_info: CommandInfo, depth: int = 0) -> None:
+    for param in cmd_info.params:
+        _add_param(parser, param)
+    if not cmd_info.subcommands:
+        return
+    dest = "command" if depth == 0 else f"{cmd_info.name}_command"
+    subparsers = parser.add_subparsers(title="commands", dest=dest, required=True)
+    for name, subcmd in cmd_info.subcommands.items():
+        subparser = subparsers.add_parser(
+            name,
+            help=argparse.SUPPRESS if subcmd.hidden else subcmd.description,
+            description=subcmd.description,
+            epilog=subcmd.epilog,
+        )
+        _populate(subparser, subcmd, depth + 1)
 
 
 def create_parser(cmd_info: CommandInfo) -> argparse.ArgumentParser:
@@ -48,76 +83,12 @@ def create_parser(cmd_info: CommandInfo) -> argparse.ArgumentParser:
         cmd_info: The CommandInfo object to convert
 
     Returns:
-        An ArgumentParser with all commands and subcommands
+        An ArgumentParser with all commands and (nested) subcommands
     """
     parser = argparse.ArgumentParser(
         prog=cmd_info.name,
         description=cmd_info.description,
         epilog=cmd_info.epilog,
     )
-
-    # Add all parameters
-    for param in cmd_info.params:
-        _add_param(parser, param)
-
-    # Add subcommands if any
-    if cmd_info.subcommands:
-        required = bool(cmd_info.subcommands)  # Required if there are subcommands
-        subparsers = parser.add_subparsers(title="commands", dest="command", required=required)
-        for name, subcmd in cmd_info.subcommands.items():
-            subparser = subparsers.add_parser(
-                name,
-                help=subcmd.description,
-                description=subcmd.description,
-                epilog=subcmd.epilog,
-            )
-            # Recursively add parameters and subcommands
-            for param in subcmd.params:
-                _add_param(subparser, param)
-            if subcmd.subcommands:
-                # Recursive call for nested subcommands
-                sub_subparsers = subparser.add_subparsers(
-                    title="commands",
-                    dest=f"{name}_command",
-                    required=bool(subcmd.subcommands),
-                )
-                for sub_name, sub_subcmd in subcmd.subcommands.items():
-                    sub_subparser = sub_subparsers.add_parser(
-                        sub_name,
-                        help=sub_subcmd.description,
-                        description=sub_subcmd.description,
-                        epilog=sub_subcmd.epilog,
-                    )
-                    for param in sub_subcmd.params:
-                        _add_param(sub_subparser, param)
-
+    _populate(parser, cmd_info)
     return parser
-
-
-if __name__ == "__main__":
-    import sys
-
-    from clinspector.models.commandinfo import CommandInfo
-    from clinspector.models.param import Param
-
-    # Example usage
-    param = Param(name="verbose", help="Increase verbosity", is_flag=True, opts=["-v", "--verbose"])
-    sub_cmd = CommandInfo(
-        name="hello",
-        description="Say hello",
-        params=[
-            Param(name="name", help="Name to greet", required=True),
-            Param(name="count", help="Number of greetings", opts=["--count", "-c"], default=1),
-        ],
-    )
-    info = CommandInfo(
-        name="mycli",
-        description="A sample CLI",
-        params=[param],
-        subcommands={"hello": sub_cmd},
-    )
-
-    parser = create_parser(info)
-    test_args = ["hello", "world", "--count", "3"]  # Sample command
-    args = parser.parse_args(test_args if len(sys.argv) == 1 else sys.argv[1:])
-    print(f"Parsed arguments: {args}")

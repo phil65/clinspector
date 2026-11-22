@@ -59,7 +59,7 @@ class ManPageProvider(HelpProvider):
                 text = " ".join(current_paragraph).strip()
                 # Clean up common formatting artifacts
                 text = re.sub(r"\s+", " ", text)
-                text = text.replace("- ", "")
+                text = re.sub(r"(\w)- (\w)", r"\1\2", text)  # re-join hyphenated words
                 if current_section == "DESCRIPTION":
                     description_lines.append(text)
                 current_paragraph.clear()
@@ -69,7 +69,7 @@ class ManPageProvider(HelpProvider):
             line = line.rstrip()
 
             # Section headers are usually uppercase
-            if line and line.upper() == line and not line.startswith(" "):
+            if line.isupper() and not line.startswith((" ", "\t")):
                 flush_paragraph()
                 current_section = line.strip()
                 continue
@@ -127,6 +127,7 @@ if __name__ == "__main__":
 
     async def main() -> None:
         provider = ManPageProvider()
-        print(await provider.list_commands())
+        help_info = await provider.get_command_help("ls")
+        print(help_info.name, help_info.description[:200])
 
     asyncio.run(main())

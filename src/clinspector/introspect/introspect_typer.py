@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, cast
 
-import typer
 from typer.core import TyperArgument, TyperOption
 from typer.main import get_command
 
+from clinspector.introspect._utils import first_envvar, resolve_command
 from clinspector.models import commandinfo, param
 
 
 if TYPE_CHECKING:
+    import typer
     from typer import _click
 
 
@@ -40,7 +41,7 @@ def _parse_param(p: _click.Parameter) -> param.Param:
         nargs=p.nargs,
         multiple=p.multiple,
         default=p.default,
-        envvar=p.envvar if isinstance(p.envvar, str) else None,
+        envvar=first_envvar(p.envvar),
         help=getattr(p, "help", None),
         hidden=getattr(p, "hidden", False),
         is_eager=p.is_eager,
@@ -48,7 +49,7 @@ def _parse_param(p: _click.Parameter) -> param.Param:
         choices=[str(c) for c in choices] if choices is not None else None,
         prompt=opt.prompt if opt else None,
         is_flag=opt.is_flag if opt else False,
-        flag_value=opt.is_flag if opt else False,
+        flag_value=bool(getattr(opt, "flag_value", opt.is_flag)) if opt else False,
         count=opt.count if opt else False,
     )
 
@@ -91,24 +92,10 @@ def parse(
 
 
 def get_info(instance: typer.Typer, command: str | None = None) -> commandinfo.CommandInfo:
-    """Return a `CommmandInfo` object for command of given Typer object.
+    """Return a `CommandInfo` object for command of given Typer object.
 
     Args:
-        instance: A `Typer`, **click** `Group` or `ArgumentParser` instance
-        command: The command to get info for.
+        instance: A `Typer` instance
+        command: The command to get info for (supports dot notation for subcommands).
     """
-    cmd = get_command(instance)
-    info = parse(cmd)
-    if command:
-        ctx = typer.Context(cmd)
-        subcommands = getattr(cmd, "commands", {})
-        cmds = {k: parse(v, parent=ctx) for k, v in subcommands.items()}
-        return cmds.get(command, info)
-    return info
-
-
-if __name__ == "__main__":
-    from mkdocs_mknodes import cli
-
-    info = get_info(cli.cli, command="mkdocs")
-    print(info)
+    return resolve_command(parse(get_command(instance)), command)

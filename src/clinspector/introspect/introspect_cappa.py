@@ -2,83 +2,117 @@
 
 from __future__ import annotations
 
-import dataclasses
-from typing import Any, get_type_hints
+from typing import TYPE_CHECKING, Any
 
 import cappa
+from cappa.arg import ArgAction
+from cappa.default import Env
+from cappa.type_view import Empty
 
+from clinspector.introspect._utils import resolve_command
 from clinspector.models import commandinfo, param
 
 
-def _get_param_from_arg(name: str, arg: cappa.Arg[Any]) -> param.Param:
-    """Convert a cappa.Arg to a Param object.
+if TYPE_CHECKING:
+    from cappa.arg import Arg
+    from cappa.command import Command
 
-    Args:
-        name: Parameter name
-        arg: Cappa argument object
-    """
-    opts = []
-    if arg.short:
-        opts.append(f"-{arg.short}")
-    if arg.long:
-        opts.append(f"--{arg.long}")
 
+_FLAG_ACTIONS = {
+    ArgAction.store_true,
+    ArgAction.store_false,
+    ArgAction.count,
+    ArgAction.help,
+    ArgAction.version,
+}
+_MULTIPLE_ACTIONS = {ArgAction.append}
+
+
+def _default_and_env(arg: Arg[Any]) -> tuple[Any, str | None]:
+    default = arg.default
+    if default is None or default is Empty:
+        return None, None
+    value = getattr(default, "default", default)
+    envvar = next(
+        (d.env_vars[0] for d in getattr(default, "sequence", ()) if isinstance(d, Env)),
+        None,
+    )
+    return (None if value is Empty else value), envvar
+
+
+def _flags(value: Any) -> list[str]:
+    """Normalize a collected cappa `short` / `long` value (False or list) to a list."""
+    if isinstance(value, str):
+        return [value]
+    return [v for v in value if isinstance(v, str)] if isinstance(value, list) else []
+
+
+def _get_param_from_arg(arg: Arg[Any]) -> param.Param:
+    """Convert a (collected) cappa `Arg` to a Param object."""
+    opts = [*_flags(arg.short), *_flags(arg.long)]
+    default, envvar = _default_and_env(arg)
+    action = arg.action
+    num_args = arg.num_args if isinstance(arg.num_args, int) else 1
+    field_name = str(arg.field_name)
+    metavar = arg.value_name if isinstance(arg.value_name, str) else None
     return param.Param(
-        name=name,
-        help=arg.help,
-        default=arg.default,
-        required=arg.required or False,
+        name=field_name,
+        help=arg.help or None,
+        default=default,
+        envvar=envvar,
+        required=bool(arg.required),
         opts=opts,
-        # multiple=arg.multiple,
-        # is_flag=isinstance(arg.type, bool),
-        # metavar=arg.metavar,
-        # envvar=arg.env,
-        hidden=arg.hidden,
+        is_flag=action in _FLAG_ACTIONS,
+        count=action is ArgAction.count,
+        multiple=action in _MULTIPLE_ACTIONS or num_args == -1,
+        nargs=num_args,
+        choices=[str(c) for c in arg.choices] if arg.choices else None,
+        metavar=metavar if metavar != field_name else None,
+        hidden=bool(arg.hidden),
         param_type_name="option" if opts else "argument",
     )
 
 
-def get_info(cls: type[Any]) -> commandinfo.CommandInfo:
-    """Extract CLI information from a cappa dataclass.
+def _usage(name: str, params: list[param.Param], has_subcommands: bool) -> str:
+    parts = [name]
+    if any(p.opts for p in params):
+        parts.append("[OPTIONS]")
+    parts.extend(p.name.upper() for p in params if not p.opts)
+    if has_subcommands:
+        parts.append("COMMAND")
+    return " ".join(parts)
 
-    Args:
-        cls: Dataclass to analyze
 
-    Raises:
-        TypeError: If cls is not a dataclass
-    """
-    if not dataclasses.is_dataclass(cls):
-        msg = f"Expected a dataclass, got {type(cls)}"
-        raise TypeError(msg)
-
+def _parse_command(command: Command[Any]) -> commandinfo.CommandInfo:
     params: list[param.Param] = []
-    hints = get_type_hints(cls, include_extras=True)
-    params = [
-        _get_param_from_arg(field.name, meta)
-        for field in dataclasses.fields(cls)
-        if (hint := hints.get(field.name)) and hasattr(hint, "__metadata__")
-        for meta in hint.__metadata__
-        if isinstance(meta, cappa.Arg)
-    ]
-
+    subcommands: dict[str, commandinfo.CommandInfo] = {}
+    for arg in command.arguments:
+        if isinstance(arg, cappa.Subcommand):
+            for name, sub in (arg.options or {}).items():
+                subcommands[name] = _parse_command(sub)
+        elif isinstance(arg, cappa.Arg):
+            params.append(_get_param_from_arg(arg))
+    name = command.real_name()
+    description = "\n\n".join(s for s in (command.help, command.description) if s)
     return commandinfo.CommandInfo(
-        name=cls.__name__.lower(),
-        description=cls.__doc__ or "",
+        name=name,
+        description=description,
+        usage=_usage(name, params, bool(subcommands)),
         params=params,
-        usage=cls.__name__.lower(),
+        subcommands=subcommands,
+        hidden=bool(command.hidden),
+        deprecated=bool(command.deprecated),
+        epilog=command.epilog if isinstance(command.epilog, str) else None,
+        callback=command.invoke if callable(command.invoke) else None,
     )
 
 
-if __name__ == "__main__":
-    import typing
+def get_info(cls: type[Any], command: str | None = None) -> commandinfo.CommandInfo:
+    """Extract CLI information from a cappa command class.
 
-    @cappa.command(invoke=print)  # ty: ignore[not-callable]
-    class Test:
-        """Test command that demonstrates cappa usage."""
-
-        name: typing.Annotated[str, cappa.Arg(help="Name to greet")]
-        count: typing.Annotated[int, cappa.Arg("-c", help="Times to greet")] = 1
-        excited: typing.Annotated[bool, cappa.Arg("--excited", "-e")] = False
-
-    info = get_info(Test)
-    print(info)
+    Args:
+        cls: The (dataclass-like) command class to analyze
+        command: The command to get info for (supports dot notation for subcommands).
+    """
+    collected = cappa.collect(cls, help=False, completion=False)
+    return resolve_command(_parse_command(collected), command)
