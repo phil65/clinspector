@@ -15,16 +15,27 @@ if TYPE_CHECKING:
 
 def _parse_param(p: _click.Parameter) -> param.Param:
     annotation = choices = None
-    if isinstance(p, TyperOption | TyperArgument):
-        annotation = p.type_descriptor.annotation
-        choices = p.type_descriptor.choices
+    click_type = getattr(p, "type", None)
+    if isinstance(p, TyperOption | TyperArgument) and (
+        descriptor := getattr(p, "type_descriptor", None)
+    ):
+        # typer versions with a type descriptor (original Python annotation)
+        annotation = descriptor.annotation
+        choices = descriptor.choices
+    else:
+        # other typer versions only expose the click ParamType
+        choices = getattr(click_type, "choices", None)
     opt = p if isinstance(p, TyperOption) else None
     return param.Param(
         name=p.name,
         param_type_name=p.param_type_name,  # type: ignore[arg-type]
         opts=p.opts,
         secondary_opts=p.secondary_opts,
-        type={"name": getattr(annotation, "__name__", str(annotation))} if annotation else None,
+        type=(
+            {"name": getattr(annotation, "__name__", str(annotation))}
+            if annotation
+            else ({"name": click_type.name} if click_type else None)
+        ),
         required=p.required,
         nargs=p.nargs,
         multiple=p.multiple,
