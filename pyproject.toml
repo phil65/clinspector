@@ -279,7 +279,11 @@ include = ["src"]
 [tool.ty.analysis]
 # Optional dependencies that are not always installed, e.g. "numpy", "numpy.**".
 # Unresolved imports are errors otherwise, so broken imports are caught.
-allowed-unresolved-imports = []
+allowed-unresolved-imports = [
+  # only used in `if __name__ == "__main__":` demo blocks (docs group, not installed in CI)
+  "mkdocs.**",
+  "mkdocs_mknodes.**",
+]
 
 [tool.ty.rules]
 # Narrowing an overridden class attribute (e.g. pydantic discriminators,
