@@ -99,16 +99,13 @@ def get_cmd_markdown(
 
     env = _get_jinja_env()
 
-    # Define render function for templates to use
+    templates = {"command_template": _COMMAND_TEMPLATE, "param_template": _PARAM_TEMPLATE}
+
+    # Define render function for templates to use.
+    # Sub-templates are passed on so that nested renders can access them.
     def render_template(template_str: str, **kwargs: Any) -> str:
         template = env.from_string(template_str)
-        return template.render(**kwargs)
+        return template.render(**templates, **kwargs)
 
     env.filters["render"] = render_template
-    template = env.from_string(_OUTPUT_TEMPLATE)  # Prepare the main template
-    return template.render(
-        info=info,
-        include_subcommands=include_subcommands,
-        command_template=_COMMAND_TEMPLATE,
-        param_template=_PARAM_TEMPLATE,
-    )
+    return render_template(_OUTPUT_TEMPLATE, info=info, include_subcommands=include_subcommands)
