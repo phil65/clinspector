@@ -3,7 +3,7 @@
 [project]
 name = "clinspector"
 version = "1.0.4"
-description = "A library to parse CLI output into structured data."
+description = "Introspect Python CLI apps (Typer, Click, Cleo, Cappa, Cyclopts, argparse) into structured data."
 readme = "README.md"
 requires-python = ">=3.13"
 license = "MIT"
@@ -11,7 +11,18 @@ license-files = ["LICENSE"]
 authors = [
   { name = "Philipp Temminghoff", email = "philipptemminghoff@googlemail.com" },
 ]
-keywords = []
+keywords = [
+  "argparse",
+  "cappa",
+  "cleo",
+  "cli",
+  "click",
+  "command-line",
+  "cyclopts",
+  "documentation",
+  "introspection",
+  "typer",
+]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
@@ -37,6 +48,7 @@ dependencies = [
 "Code coverage" = "https://app.codecov.io/gh/phil65/clinspector"
 Discussions = "https://github.com/phil65/clinspector/discussions"
 Documentation = "https://phil65.github.io/clinspector/"
+Homepage = "https://phil65.github.io/clinspector/"
 Issues = "https://github.com/phil65/clinspector/issues"
 Source = "https://github.com/phil65/clinspector"
 
