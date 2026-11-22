@@ -25,92 +25,94 @@
 
 [Read the documentation!](https://phil65.github.io/clinspector/)
 
-# CLInspector Documentation
+CLInspector introspects Python CLI applications and returns their command tree
+(commands, subcommands, options and arguments) as plain, framework-independent
+dataclasses. Use it to generate CLI documentation, build completions or wrappers,
+or analyze CLI interfaces without parsing `--help` output.
 
-CLInspector is a library to introspect Python CLI applications and extract their command structure and parameters programmatically.
+## Installation
 
-## Usage
+```bash
+pip install clinspector
+```
 
-The main entry point is the `get_cmd_info()` function which analyzes a CLI application instance and returns a structured `CommandInfo` object:
+Framework support is optional; install the extras for the frameworks you use:
+
+```bash
+pip install "clinspector[click]"      # or: typer, cleo, cappa, cyclopts
+pip install "clinspector[all]"        # click, typer, cappa and cleo
+pip install "clinspector[markdown]"   # Markdown rendering (jinja2)
+```
+
+## Quickstart
 
 ```python
+import click
+
 from clinspector import get_cmd_info
 
-command_info = get_cmd_info(cli_instance)
+
+@click.group()
+@click.option("-v", "--verbose", is_flag=True, help="Enable verbose output")
+def cli(verbose: bool) -> None:
+    """Example CLI tool."""
+
+
+@cli.command()
+@click.argument("target")
+@click.option("--release", is_flag=True, help="Build in release mode")
+def build(target: str, release: bool) -> None:
+    """Build the project."""
+
+
+info = get_cmd_info(cli)
+print(info.name, "-", info.description)  # cli - Example CLI tool.
+for param in info.params:
+    print(param.opts, param.help)  # ['-v', '--verbose'] Enable verbose output, ...
+
+build_info = info["build"]  # subcommands via item access
+print(build_info.full_command)  # cli build
+print([p.name for p in build_info.params])  # ['target', 'release', ...]
 ```
 
-The function accepts CLI application instances from the following frameworks:
+## Supported frameworks
 
-- [Typer](https://typer.tiangolo.com/) - `typer.Typer` instances
-- [Click](https://click.palletsprojects.com/) - `click.Group` instances
-- [Cleo](https://cleo.readthedocs.io/) - `cleo.Application` instances
-- [Cappa](https://github.com/DynamicArray/Cappa) - Classes decorated with `@cappa.command`
-- [argparse](https://docs.python.org/3/library/argparse.html) - `ArgumentParser` instances
+`get_cmd_info(instance, command=None)` accepts:
 
-The extracted information is returned as a `CommandInfo` object containing:
+- [Typer](https://typer.tiangolo.com/): `typer.Typer` instances
+- [Click](https://click.palletsprojects.com/): `click.Group` instances
+- [Cleo](https://cleo.readthedocs.io/): `cleo.application.Application` instances
+- [Cappa](https://github.com/DanCardin/cappa): classes decorated with `@cappa.command`
+- [Cyclopts](https://github.com/BrianPugh/cyclopts): `cyclopts.App` instances
+- [argparse](https://docs.python.org/3/library/argparse.html): `ArgumentParser` instances
 
-### CommandInfo Fields
+Pass `command` to get a specific subcommand directly (argparse also accepts dot
+notation like `"group.sub"`). It returns `None` for unsupported objects.
 
-- `name: str` - Name of the command
-- `description: str` - Description/help text
-- `usage: str` - Formatted usage string
-- `subcommands: dict[str, CommandInfo]` - Nested subcommands
-- `deprecated: bool` - Whether command is marked as deprecated
-- `epilog: str | None` - Optional epilog text
-- `hidden: bool` - Whether command is hidden
-- `params: list[Param]` - List of command parameters
+## Data model
 
-### Param Fields
+`CommandInfo` (`clinspector.CommandInfo`):
 
-- `name: str` - Parameter name
-- `help: str | None` - Help text
-- `default: Any` - Default value
-- `opts: list[str]` - Parameter options (e.g. `["-f", "--flag"]`)
-- `required: bool` - Whether parameter is required
-- `is_flag: bool` - Whether parameter is a flag
-- `multiple: bool` - Whether parameter accepts multiple values
-- `nargs: int | str | None` - Number of arguments accepted
-- `envvar: str | None` - Environment variable name
-- `hidden: bool` - Whether parameter is hidden
-- `param_type_name: Literal["option", "parameter", "argument"]` - Parameter type
-- `type: dict[str, str] | None` - Parameter type information
-- `metavar: str | None` - Display name in help text
+- `name`, `description`, `usage`, `epilog`
+- `params: list[Param]`
+- `subcommands: dict[str, CommandInfo]` (also reachable via `info["name"]`)
+- `deprecated`, `hidden`, `callback`
+- `full_path` / `full_command`: the command path including parents
+- `build_cli_command()`, `execute_cli()`, `execute_shell()`: run the command as a subprocess
 
-You can access subcommands using dictionary syntax:
+`Param` (`clinspector.Param`), among others:
 
-```python
-# Get info for "build" subcommand
-build_info = command_info["build"]
+- `name`, `help`, `default`, `opts` (e.g. `["-f", "--flag"]`), `secondary_opts`
+- `required`, `is_flag`, `multiple`, `nargs`, `choices`, `metavar`
+- `envvar`, `hidden`, `type`, `param_type_name` (`"option"`, `"argument"`, ...)
 
-# Access nested subcommand
-nested_info = command_info["group"]["subcommand"]
-```
-```
+## More features
 
-The extracted information allows you to:
-
-- Generate documentation automatically
-- Build command completion
-- Create wrappers and adapters
-- Perform static analysis of CLI interfaces
-- And more!
-
-Example output for a click command:
-
-```python
-CommandInfo(
-    name="cli",
-    description="Example CLI tool",
-    usage="cli [OPTIONS] COMMAND [ARGS]...",
-    params=[
-        Param(name="verbose", help="Enable verbose output", opts=["-v", "--verbose"])
-    ],
-    subcommands={
-        "build": CommandInfo(
-            name="build",
-            description="Build the project",
-            params=[...]
-        )
-    }
-)
-```
+- **Markdown docs**: `clinspector.introspect.markdown.get_cmd_markdown(instance, command=None, include_subcommands=False)`
+  renders a command as Markdown (`markdown` extra).
+- **Synthesis**: create a CLI from a `CommandInfo`, e.g.
+  `clinspector.synthesis.synth_click.create_group`, `synth_typer.create_app`,
+  `synth_cleo.create_app`, `synth_argparse.create_parser`.
+- **Help providers**: async lookups of command examples from tldr pages
+  (`clinspector.help_providers.tldr_pages.TldrProvider`, `tldr` extra) and man pages
+  (`clinspector.help_providers.man_pages.ManPageProvider`).
