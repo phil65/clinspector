@@ -16,6 +16,8 @@ def parse(parser: argparse.ArgumentParser) -> commandinfo.CommandInfo:
         subcommands = {}
     params = [
         param.Param(
+            name=i.dest,
+            param_type_name="option" if i.option_strings else "argument",
             metavar=" ".join(i.metavar) if isinstance(i.metavar, tuple) else i.metavar,
             help=i.help,
             default=i.default if i.default != argparse.SUPPRESS else None,
