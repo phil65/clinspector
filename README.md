@@ -9,7 +9,6 @@
 [![Implementation](https://img.shields.io/pypi/implementation/clinspector.svg)](https://pypi.org/project/clinspector/)
 [![Releases](https://img.shields.io/github/downloads/phil65/clinspector/total.svg)](https://github.com/phil65/clinspector/releases)
 [![Github Contributors](https://img.shields.io/github/contributors/phil65/clinspector)](https://github.com/phil65/clinspector/graphs/contributors)
-[![Github Discussions](https://img.shields.io/github/discussions/phil65/clinspector)](https://github.com/phil65/clinspector/discussions)
 [![Github Forks](https://img.shields.io/github/forks/phil65/clinspector)](https://github.com/phil65/clinspector/forks)
 [![Github Issues](https://img.shields.io/github/issues/phil65/clinspector)](https://github.com/phil65/clinspector/issues)
 [![Github Issues](https://img.shields.io/github/issues-pr/phil65/clinspector)](https://github.com/phil65/clinspector/pulls)
