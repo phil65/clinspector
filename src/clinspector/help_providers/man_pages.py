@@ -103,12 +103,12 @@ class ManPageProvider(HelpProvider):
         url = f"{self.BASE_URL}/{section.number}/{section.name}"
         response = await anyenv.get(url, cache_ttl=60 * 60 * 24)
         return self._parse_page(await response.text())
-        # except httpx.HTTPStatusError as exc:
+        # except httpx2.HTTPStatusError as exc:
         #     msg = (
         #         f"Failed to fetch man page for {command}: {exc.response.status_code}"
         #     )
         #     raise ValueError(msg) from exc
-        # except httpx.TimeoutException as exc:
+        # except httpx2.TimeoutException as exc:
         #     msg = f"Timeout fetching man page for {command}"
         #     raise ValueError(msg) from exc
 
