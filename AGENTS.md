@@ -61,7 +61,7 @@ uv run pytest                        # tests (duty: `test`)
 uvx ruff check . && uvx ruff format --check .
 uv run ty check                      # type check; checks src/ only ([tool.ty.src])
 uv run deptry src                    # dependency hygiene
-uv run mkdocs-mknodes build          # docs (duty: `build`); serve: uv run mkdocs-mknodes serve
+uv run mknodes build                 # docs (duty: `build`); serve: uv run mknodes serve
 uv build
 uvx duty lint                        # ruff fix + format + ty (duties.py; duty is not a dependency)
 ```
@@ -94,7 +94,7 @@ PyPI release job in `.github/workflows/build.yml`.
   (`typer`, `click`, `cleo`, `cappa`, `cyclopts`, `markdown`, `tldr`, `man-pages`);
   `all` pulls in every extra.
 - CI tests Python 3.13-3.15 on Linux/macOS/Windows; 3.15 is allowed to fail.
-- The docs site is the mkdocs-mknodes default site: README.md is the index page, the
+- The docs site is the mknodes default site: README.md is the index page, the
   rest (API, CLI, dev pages) is generated. `docs/` is empty on purpose.
 - `help_providers` hit the network (tldr pages, man page sites).
 - `uv.lock` is gitignored.
