@@ -100,7 +100,7 @@ def _parse_app(app: App, parent_name: str = "") -> commandinfo.CommandInfo:
             else:
                 sub_info = _parse_app(sub_app, full_name)
             subcommands[cmd_name] = sub_info
-        except (AttributeError, TypeError, ValueError):
+        except AttributeError, TypeError, ValueError:
             # Create minimal command info for problematic subcommands
             subcommands[cmd_name] = commandinfo.CommandInfo(name=cmd_name)
 
