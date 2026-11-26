@@ -40,7 +40,7 @@ Framework support is optional; install the extras for the frameworks you use:
 ```bash
 pip install "clinspector[click]"      # or: typer, cleo, cappa, cyclopts
 pip install "clinspector[all]"        # all frameworks and optional features
-pip install "clinspector[markdown]"   # Markdown rendering (jinja2)
+pip install "clinspector[markdown]"   # Markdown rendering (minijinja)
 pip install "clinspector[tldr]"       # tldr page help provider (also: man-pages)
 ```
 

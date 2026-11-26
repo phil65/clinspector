@@ -7,27 +7,34 @@ from clinspector import get_cmd_info
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from jinja2 import Environment
+    from minijinja import Environment
 
     from clinspector.models.commandinfo import CommandInfo
 
 
 def _get_jinja_env() -> Environment:
-    """Get a configured Jinja2 environment."""
-    if not importlib.util.find_spec("jinja2"):
-        msg = "jinja2 is required for markdown generation. Install 'clinspector[markdown]'."
+    """Get a configured MiniJinja environment."""
+    if not importlib.util.find_spec("minijinja"):
+        msg = "minijinja is required for markdown generation. Install 'clinspector[markdown]'."
         raise ImportError(msg)
 
-    from jinja2 import Environment
+    from minijinja import Environment
 
     # Output is Markdown, so no HTML escaping.
-    return Environment(autoescape=False, trim_blocks=True, lstrip_blocks=True)
+    env = Environment(
+        auto_escape_callback=lambda _name: None,
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+    env.add_template("param", _PARAM_TEMPLATE)
+    env.add_template("command", _COMMAND_TEMPLATE)
+    return env
 
 
 # Template definitions
 _PARAM_TEMPLATE = """
 {% if param.param_type_name == "argument" or not param.opts %}
-### {{ param.name.upper() }}
+### {{ param.name | upper }}
 {% else %}
 ### {{ param.opt_str }}
 {% endif %}
@@ -41,7 +48,7 @@ Environment variable: {{ param.envvar }}
 {% if param.multiple %}
 **Multiple values allowed.**
 {% endif %}
-{% if param.default is not none and param.default not in ((), [], "") %}
+{% if param.default is not none and param.default not in ([], "") %}
 **Default:** {{ param.default }}
 {% endif %}
 {% if param.choices %}
@@ -65,7 +72,7 @@ _COMMAND_TEMPLATE = """
 ```
 
 {% for param in params %}
-{{ param_template.render(param=param) }}
+{% include "param" %}
 {% endfor %}
 """
 
@@ -100,13 +107,11 @@ def get_cmd_markdown(
         return ""
 
     env = _get_jinja_env()
-    param_template = env.from_string(_PARAM_TEMPLATE)
-    command_template = env.from_string(_COMMAND_TEMPLATE)
     return "\n".join(
-        command_template.render(
+        env.render_template(
+            "command",
             info=cmd,
             params=[p for p in cmd.params if not p.hidden],
-            param_template=param_template,
         )
         for cmd in _iter_commands(info, include_subcommands)
     )

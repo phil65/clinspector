@@ -54,7 +54,7 @@ cleo = ["cleo>=2.1.0"]
 click = ["click>=8.5.1"]
 cyclopts = ["cyclopts>=5.5.2"]
 man-pages = ["anyenv[httpx2]>=3.0.0"]
-markdown = ["jinja2>=3.1.6"]
+markdown = ["minijinja>=2.0"]
 tldr = ["tldr>=3.4.4"]
 typer = ["typer>=0.29.2"]
 

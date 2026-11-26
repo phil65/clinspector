@@ -4,7 +4,7 @@ from clinspector.introspect.markdown import get_cmd_markdown
 
 
 click = pytest.importorskip("click")
-pytest.importorskip("jinja2")
+pytest.importorskip("minijinja")
 
 
 @click.group()
@@ -74,3 +74,17 @@ def test_get_cmd_markdown_params():
 def test_get_cmd_markdown_argument_heading():
     text = get_cmd_markdown(cli, "build")
     assert "### TARGET" in text
+
+
+def test_get_cmd_markdown_required_multiple_envvar():
+    @click.command()
+    @click.option("--tag", multiple=True, envvar="APP_TAG", required=True, help="Tags")
+    def deploy(tag: tuple[str, ...]) -> None:
+        """Deploy app."""
+
+    text = get_cmd_markdown(deploy)
+    tag_section = text.split("### `--help`")[0]
+    assert "**REQUIRED**" in tag_section
+    assert "Environment variable: APP_TAG" in tag_section
+    assert "**Multiple values allowed.**" in tag_section
+    assert "**Default:**" not in tag_section
