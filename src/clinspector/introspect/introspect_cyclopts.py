@@ -1,7 +1,5 @@
 """Introspection module for cyclopts CLI applications."""
 
-from __future__ import annotations
-
 import inspect
 import types
 import typing

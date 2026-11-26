@@ -1,7 +1,5 @@
 """Module for generating Cappa CLI implementations from CommandInfo objects."""
 
-from __future__ import annotations
-
 import dataclasses
 import functools
 import operator

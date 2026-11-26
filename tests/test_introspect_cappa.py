@@ -1,7 +1,5 @@
 """Tests for cappa introspection."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Annotated
 

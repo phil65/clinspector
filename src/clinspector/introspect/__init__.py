@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import argparse
 import importlib.util
 from typing import Any, TYPE_CHECKING

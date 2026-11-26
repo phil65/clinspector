@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from clinspector import CommandInfo, Param
 
 

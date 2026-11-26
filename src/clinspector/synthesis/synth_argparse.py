@@ -1,7 +1,5 @@
 """Module for generating ArgumentParser CLI implementations from CommandInfo objects."""
 
-from __future__ import annotations
-
 import argparse
 from typing import TYPE_CHECKING, Any
 

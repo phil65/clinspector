@@ -5,8 +5,6 @@ typer, rich-click, docopt, cement, cliff, plac and fire. Use the framework intro
 (`get_cmd_info`) instead whenever the CLI object itself is available.
 """
 
-from __future__ import annotations
-
 import dataclasses
 import re
 

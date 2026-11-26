@@ -1,7 +1,5 @@
 """Test file for cyclopts introspection functionality."""
 
-from __future__ import annotations
-
 import pytest
 
 from clinspector.introspect import get_cmd_info

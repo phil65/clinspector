@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import argparse
 
 from clinspector import get_cmd_info

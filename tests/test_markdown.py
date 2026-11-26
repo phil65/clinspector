@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import pytest
 
 from clinspector.introspect.markdown import get_cmd_markdown

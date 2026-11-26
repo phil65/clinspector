@@ -1,10 +1,14 @@
 """Tests for click introspection."""
 
-from __future__ import annotations
+from typing import TYPE_CHECKING
 
 import pytest
 
 from clinspector import get_cmd_info
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 click = pytest.importorskip("click")
@@ -75,3 +79,18 @@ def test_plain_command():
     assert info
     assert info.name == "leaf"
     assert not info.subcommands
+
+
+def test_type_checking_only_annotation():
+    """Callback annotations are never evaluated (PEP 649: TYPE_CHECKING-only names are fine)."""
+
+    @click.command()
+    @click.option("--target", type=click.Path())
+    def deploy(target: Path | None) -> str:
+        return f"deploy {target}"
+
+    info = get_cmd_info(deploy)
+    assert info
+    target = next(p for p in info.params if p.name == "target")
+    assert target.type == "path"
+    assert info.execute_callback(target="x") == "deploy x"

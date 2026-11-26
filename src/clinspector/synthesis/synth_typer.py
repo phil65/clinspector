@@ -1,7 +1,5 @@
 """Module for generating Typer CLI implementations from CommandInfo objects."""
 
-from __future__ import annotations
-
 import inspect
 from typing import TYPE_CHECKING, Any, Literal
 

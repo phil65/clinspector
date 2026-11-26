@@ -1,7 +1,5 @@
 """Module for generating Cleo CLI implementations from CommandInfo objects."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, ClassVar
 
 from cleo.application import Application

@@ -1,7 +1,5 @@
 """Module for generating Click CLI implementations from CommandInfo objects."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, Any
 
 from clinspector.synthesis import is_help_param

@@ -1,7 +1,5 @@
 """Module for inspecting Cleo CLI applications."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 from clinspector.introspect._utils import resolve_command

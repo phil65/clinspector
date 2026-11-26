@@ -3,8 +3,6 @@
 Introspect Python CLI apps (Typer, Click, Cleo, Cappa, Cyclopts, argparse) into structured data.
 """
 
-from __future__ import annotations
-
 from importlib.metadata import version
 
 __version__ = version("clinspector")

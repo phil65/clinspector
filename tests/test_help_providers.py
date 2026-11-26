@@ -1,7 +1,5 @@
 """Offline tests for the help provider page parsers."""
 
-from __future__ import annotations
-
 from clinspector.help_providers.tldr_pages import TldrProvider
 
 

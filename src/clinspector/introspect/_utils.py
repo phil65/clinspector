@@ -1,7 +1,5 @@
 """Helpers shared by the framework introspection modules."""
 
-from __future__ import annotations
-
 from collections.abc import Sequence
 import types
 import typing
