@@ -90,3 +90,44 @@ async def test_man_get_command_help_fetches_page(monkeypatch):
         server.server_close()
     assert help_info.name == "ls"
     assert help_info.description.startswith("list directory contents")
+
+
+async def test_man_get_command_help_caches_page(monkeypatch, tmp_path):
+    """Repeated lookups of the same man page hit the HTTP server only once."""
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    import threading
+
+    from clinspector.help_providers.man_pages import ManPageProvider
+
+    requests = 0
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            nonlocal requests
+            requests += 1
+            body = MAN_PAGE.encode()
+            self.send_response(200 if self.path == "/1/ls" else 404)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, args=(0.05,), daemon=True).start()
+    try:
+        monkeypatch.setattr("appdirs.user_cache_dir", lambda *_args, **_kwargs: str(tmp_path))
+        monkeypatch.setattr(
+            ManPageProvider, "BASE_URL", f"http://127.0.0.1:{server.server_address[1]}"
+        )
+        provider = ManPageProvider()
+        first = await provider.get_command_help("ls(1)")
+        second = await provider.get_command_help("ls(1)")
+    finally:
+        server.shutdown()
+        server.server_close()
+    assert requests == 1
+    assert first == second
+    assert first.name == "ls"

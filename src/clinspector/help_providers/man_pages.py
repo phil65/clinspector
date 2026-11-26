@@ -101,7 +101,7 @@ class ManPageProvider(HelpProvider):
         """Get man page for a command."""
         section = self._parse_man_ref(command)
         url = f"{self.BASE_URL}/{section.number}/{section.name}"
-        return self._parse_page(await anyenv.get_text(url, cache_ttl=60 * 60 * 24))
+        return self._parse_page(await anyenv.get_text(url, cache=True, cache_ttl=60 * 60 * 24))
         # except httpx2.HTTPStatusError as exc:
         #     msg = (
         #         f"Failed to fetch man page for {command}: {exc.response.status_code}"
