@@ -72,7 +72,7 @@ PyPI release job in `.github/workflows/build.yml`.
 
 ## Conventions
 
-- Python >= 3.13, `from __future__ import annotations` everywhere, Google-style docstrings,
+- Python >= 3.14, no `from __future__ import annotations` (PEP 649; banned via ruff TID251), Google-style docstrings,
   line length 100, ruff with preview rules.
 - Models are plain dataclasses (no pydantic), with attribute docstrings below each field.
 - Framework imports are lazy (inside functions or behind `find_spec`) so that importing
